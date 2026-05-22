@@ -118,23 +118,23 @@ This plan is intentionally goal-oriented rather than code-prescriptive. The impl
 - Create: `Sources/SoundaApp/CursorTracker.swift`
 - Modify: `Sources/SoundaApp/main.swift`
 
-- [ ] **Step 1: Implement cursor polling**
+- [x] **Step 1: Implement cursor polling**
   - Poll `NSEvent.mouseLocation` on a timer around 60 Hz.
   - Normalize X/Y against the active screen frame, falling back to the main screen.
   - Compute speed, acceleration, and direction from consecutive samples.
   - Emit `CursorFrame` through a callback closure.
 
-- [ ] **Step 2: Add a temporary debug run path**
+- [x] **Step 2: Add a temporary debug run path**
   - Wire `CursorTracker` from `main.swift`.
   - Log a compact line for movement intensity or normalized coordinates while running.
   - Keep the process alive through `NSApplication`.
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
   - Run: `swift run SoundaApp`
   - Expected: process starts and cursor movement produces debug output.
   - Stop manually with `Ctrl-C` if no menu bar quit control exists yet.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
   - Commit message: `feat: track global cursor movement`
 
 ## Task 4: Add Menu Bar Controls

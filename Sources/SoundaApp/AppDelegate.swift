@@ -51,6 +51,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         print("Sounda starting...")
         print("Escape hatch: press Control-Option-Command-Q, or Ctrl-C from this terminal.")
+        print("Diagnostics: run `swift run SoundaApp --self-test` for deterministic cursor/audio checks.")
         keyboardEscapeController.start()
         updateAudioEngineForCurrentSettings()
         tracker.start()

@@ -59,6 +59,48 @@ final class AudioEngineController {
     func updateState(_ soundState: SoundState) {
         renderState.update(soundState: soundState, muted: !soundState.isEnabled)
     }
+
+    func renderDebugMetrics(
+        for soundStates: [SoundState],
+        framesPerState: Int = 2_048
+    ) -> AudioDebugMetrics {
+        let debugRenderState = AudioRenderState()
+        debugRenderState.sampleRate = renderState.sampleRate
+        var metrics = AudioDebugMetrics()
+
+        for soundState in soundStates {
+            debugRenderState.update(soundState: soundState, muted: !soundState.isEnabled)
+            debugRenderState.renderSamples(frameCount: framesPerState) { sample, accentSample in
+                metrics.observe(sample: sample, accentSample: accentSample)
+            }
+        }
+
+        return metrics
+    }
+}
+
+struct AudioDebugMetrics {
+    private(set) var frameCount = 0
+    private(set) var peak = 0.0
+    private(set) var accentPeak = 0.0
+    private var sumOfSquares = 0.0
+
+    var rms: Double {
+        guard frameCount > 0 else {
+            return 0
+        }
+
+        return sqrt(sumOfSquares / Double(frameCount))
+    }
+
+    mutating func observe(sample: Float, accentSample: Float) {
+        let sample = Double(sample)
+        let accentSample = Double(accentSample)
+        frameCount += 1
+        peak = max(peak, abs(sample))
+        accentPeak = max(accentPeak, abs(accentSample))
+        sumOfSquares += sample * sample
+    }
 }
 
 private final class AudioRenderState {
@@ -114,6 +156,29 @@ private final class AudioRenderState {
             return
         }
 
+        var frameIndex = 0
+        renderSamples(frameCount: frameCount) { sample, _ in
+            for buffer in bufferList {
+                guard let data = buffer.mData else {
+                    continue
+                }
+
+                let channel = data.assumingMemoryBound(to: Float.self)
+                channel[frameIndex] = sample
+            }
+
+            frameIndex += 1
+        }
+    }
+
+    func renderSamples(
+        frameCount: Int,
+        observe: (_ sample: Float, _ accentSample: Float) -> Void
+    ) {
+        guard frameCount > 0 else {
+            return
+        }
+
         lock.lock()
         let frequency = targetFrequency
         var amplitude = targetAmplitude
@@ -133,7 +198,7 @@ private final class AudioRenderState {
         let amplitudeStep = (amplitude - currentAmplitude) / Double(frameCount)
         let phaseIncrement = twoPi * frequency / sampleRate
 
-        for frameIndex in 0..<frameCount {
+        for _ in 0..<frameCount {
             currentAmplitude += amplitudeStep
 
             let leadSample = sin(phase) * currentAmplitude
@@ -150,15 +215,7 @@ private final class AudioRenderState {
 
             phase = wrappedPhase(phase + phaseIncrement)
             let sample = Float(max(-1, min(1, leadSample + accentSample)))
-
-            for buffer in bufferList {
-                guard let data = buffer.mData else {
-                    continue
-                }
-
-                let channel = data.assumingMemoryBound(to: Float.self)
-                channel[frameIndex] = sample
-            }
+            observe(sample, Float(accentSample))
         }
 
         localAccents.removeAll { accent in

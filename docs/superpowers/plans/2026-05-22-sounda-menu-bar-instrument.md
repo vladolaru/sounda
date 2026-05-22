@@ -260,22 +260,22 @@ This plan is intentionally goal-oriented rather than code-prescriptive. The impl
 - Modify: `Sources/SoundaApp/AudioEngineController.swift`
 - Modify: `Tests/SoundaCoreTests/SoundMapperTests.swift`
 
-- [ ] **Step 1: Tune defaults**
+- [x] **Step 1: Tune defaults**
   - Sensitivity should keep ordinary small pointer movement quiet.
   - Fast movement should become audible quickly.
   - Accent cooldown should make sharp turns fun without stutter.
   - Default volume should be audible but not startling.
 
-- [ ] **Step 2: Tune controls**
+- [x] **Step 2: Tune controls**
   - Slider ranges should make meaningful differences.
   - Presets should be clearly different but not require a complex sound engine.
   - The readout should remain useful and not visually noisy.
 
-- [ ] **Step 3: Re-run regression tests**
+- [x] **Step 3: Re-run regression tests**
   - Run: `swift test`
   - Expected: all tests pass after tuning.
 
-- [ ] **Step 4: Manual demo verification**
+- [x] **Step 4: Manual demo verification**
   - Enable Sounda from the menu bar.
   - Move slowly: quiet.
   - Move quickly: lead voice fades in.
@@ -284,7 +284,7 @@ This plan is intentionally goal-oriented rather than code-prescriptive. The impl
   - Toggle mute: silence.
   - Quit from the menu bar.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
   - Commit message: `fix: tune Sounda demo responsiveness`
 
 ## Task 8: Document Running And Demoing Sounda

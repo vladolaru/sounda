@@ -227,28 +227,28 @@ This plan is intentionally goal-oriented rather than code-prescriptive. The impl
 - Modify: `Sources/SoundaApp/AppDelegate.swift`
 - Modify: `README.md`
 
-- [ ] **Step 1: Add deterministic cursor replay**
+- [x] **Step 1: Add deterministic cursor replay**
   - Add a diagnostics path that replays a short sequence of synthetic `CursorFrame` values through `SoundMapper`.
   - Include at least three replay segments: still/slow movement, fast horizontal movement, and sharp direction changes.
   - Prefer a command-line flag such as `swift run SoundaApp --self-test` so this can run without manually using the menu bar.
 
-- [ ] **Step 2: Add audio observability**
+- [x] **Step 2: Add audio observability**
   - Measure sound generation inside the app process rather than through the microphone or speakers.
   - Acceptable approaches: install an audio tap on the mixer/source path and measure RMS/peak values from `AVAudioPCMBuffer`, or expose a lightweight debug meter from the same synth renderer used by `AVAudioSourceNode`.
   - The self-test should distinguish expected silence from expected audible output.
 
-- [ ] **Step 3: Add an optional real-pointer smoke command**
+- [x] **Step 3: Add an optional real-pointer smoke command**
   - If practical, add a separately named debug command for posting a small Core Graphics mouse movement sequence.
   - Keep this opt-in only; never move the user's pointer during normal tests.
   - If Accessibility/security permissions block it, report a clear skipped/manual status rather than failing the core test suite.
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
   - Run: `swift run SoundaApp --self-test`
   - Expected: slow replay reports silence, fast replay reports non-zero audio, sharp-turn replay reports chime/accent activity.
   - Run: `swift test`
   - Expected: core mapping tests still pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
   - Commit message: `test: add cursor audio diagnostics`
 
 ## Task 7: Tune The Demo Loop

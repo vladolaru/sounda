@@ -15,6 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var menuBarController: MenuBarController?
     private var cursorTracker: CursorTracker?
     private var keyboardEscapeController: KeyboardEscapeController?
+    private var audioEngineController: AudioEngineController?
     private var soundMapper: SoundMapper
 
     init(arguments: [String] = Array(CommandLine.arguments.dropFirst())) {
@@ -26,11 +27,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApplication.shared.setActivationPolicy(.accessory)
+        audioEngineController = AudioEngineController()
 
         let menuBarController = MenuBarController(
             settings: settings,
             onSettingsChange: { [weak self] settings in
-                self?.settings = settings
+                self?.handleSettingsChange(settings)
             },
             onQuit: {
                 NSApplication.shared.terminate(nil)
@@ -50,19 +52,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         print("Sounda starting...")
         print("Escape hatch: press Control-Option-Command-Q, or Ctrl-C from this terminal.")
         keyboardEscapeController.start()
+        updateAudioEngineForCurrentSettings()
         tracker.start()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        audioEngineController?.stop()
         keyboardEscapeController?.stop()
         cursorTracker?.stop()
     }
 }
 
 private extension AppDelegate {
+    func handleSettingsChange(_ settings: SoundaSettings) {
+        self.settings = settings
+        updateAudioEngineForCurrentSettings()
+    }
+
+    func updateAudioEngineForCurrentSettings() {
+        guard let audioEngineController else {
+            return
+        }
+
+        if settings.isEnabled {
+            let didStart = audioEngineController.start()
+            menuBarController?.updateAudioStatus(
+                didStart ? "Audio running" : (audioEngineController.errorMessage ?? "Audio unavailable")
+            )
+        } else {
+            audioEngineController.stop()
+            menuBarController?.updateAudioStatus("Audio off")
+        }
+    }
+
     func handleCursorFrame(_ frame: CursorFrame) {
         soundMapper.settings = settings
         let soundState = soundMapper.map(frame)
+        audioEngineController?.updateState(soundState)
         menuBarController?.updateReadout(soundState)
 
         guard let debugSampleLimit else {

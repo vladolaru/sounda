@@ -43,6 +43,12 @@ final class MenuBarController {
             self?.contentViewController.updateReadout(soundState)
         }
     }
+
+    func updateAudioStatus(_ status: String) {
+        DispatchQueue.main.async { [weak self] in
+            self?.contentViewController.updateAudioStatus(status)
+        }
+    }
 }
 
 private extension MenuBarController {
@@ -72,6 +78,7 @@ private final class SoundaControlsViewController: NSViewController {
     private let presetPopUp = NSPopUpButton(frame: .zero, pullsDown: false)
     private let intensityValueLabel = NSTextField(labelWithString: "0%")
     private let noteValueLabel = NSTextField(labelWithString: "Silence")
+    private let audioStatusValueLabel = NSTextField(labelWithString: "Audio starting")
 
     init(
         settings: SoundaSettings,
@@ -104,6 +111,11 @@ private final class SoundaControlsViewController: NSViewController {
         intensityValueLabel.stringValue = "\(intensity)%"
         noteValueLabel.stringValue = soundState.displayNoteName
     }
+
+    func updateAudioStatus(_ status: String) {
+        audioStatusValueLabel.stringValue = status
+        audioStatusValueLabel.textColor = status.hasPrefix("Audio unavailable") ? .systemRed : .secondaryLabelColor
+    }
 }
 
 private extension SoundaControlsViewController {
@@ -124,6 +136,7 @@ private extension SoundaControlsViewController {
         stackView.addArrangedSubview(presetRow())
         stackView.addArrangedSubview(readoutRow(title: "Intensity", valueLabel: intensityValueLabel))
         stackView.addArrangedSubview(readoutRow(title: "Note", valueLabel: noteValueLabel))
+        stackView.addArrangedSubview(readoutRow(title: "Audio", valueLabel: audioStatusValueLabel))
 
         let colorMode = NSButton(checkboxWithTitle: "Color mode (experimental)", target: nil, action: nil)
         colorMode.state = .off

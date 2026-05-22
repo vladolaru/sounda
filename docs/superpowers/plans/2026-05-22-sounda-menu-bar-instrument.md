@@ -43,7 +43,7 @@ This plan is intentionally goal-oriented rather than code-prescriptive. The impl
 - Create: `Sources/SoundaCoreSmokeTests/main.swift`
 - Create: `Tests/SoundaCoreTests/SoundMapperTests.swift`
 
-- [ ] **Step 1: Create the package manifest**
+- [x] **Step 1: Create the package manifest**
   - Define a macOS-only Swift package.
   - Define library target `SoundaCore`.
   - Define executable target `SoundaApp` depending on `SoundaCore`.
@@ -51,20 +51,20 @@ This plan is intentionally goal-oriented rather than code-prescriptive. The impl
   - Define test target `SoundaCoreTests` depending on `SoundaCore`.
   - Avoid third-party dependencies.
 
-- [ ] **Step 2: Add minimal bootstrap types**
+- [x] **Step 2: Add minimal bootstrap types**
   - Add small compile-ready versions of `SoundaSettings`, `CursorFrame`, `SoundState`, and `SoundMapper`.
   - `SoundMapper` can return silence for now.
   - Keep all types in `SoundaCore` free of AppKit and AVFAudio imports.
 
-- [ ] **Step 3: Add a minimal executable**
+- [x] **Step 3: Add a minimal executable**
   - `Sources/SoundaApp/main.swift` should import Foundation/AppKit and print or log that Sounda starts.
   - It does not need to create the menu bar item yet.
 
-- [ ] **Step 4: Add a smoke test**
+- [x] **Step 4: Add a smoke test**
   - Add one XCTest that constructs `SoundMapper` with default settings and maps a basic cursor frame without crashing for full Xcode/XCTest environments.
   - Add a `SoundaCoreSmokeTests` executable that constructs `SoundMapper`, maps a basic cursor frame, asserts the expected silent bootstrap state, prints a concise success message, and exits non-zero on failure.
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
   - Run: `swift build`
   - Expected: package builds.
   - Run: `swift test`
@@ -72,7 +72,7 @@ This plan is intentionally goal-oriented rather than code-prescriptive. The impl
   - Run: `swift run SoundaCoreSmokeTests`
   - Expected: smoke assertion executes and prints `SoundaCore smoke test passed`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
   - Commit message: `chore: scaffold Swift package`
 
 ## Task 2: Implement The Pure Sound Mapping Core

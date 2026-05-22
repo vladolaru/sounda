@@ -23,6 +23,7 @@ public struct SoundaSettings: Equatable, Sendable {
 public extension SoundaSettings {
     enum Preset: String, CaseIterable, Equatable, Sendable {
         case minorPentatonic
+        case ragtime
         case glassChimes
         case warmBass
 
@@ -30,6 +31,8 @@ public extension SoundaSettings {
             switch self {
             case .minorPentatonic:
                 return "Minor pentatonic"
+            case .ragtime:
+                return "Ragtime"
             case .glassChimes:
                 return "Glass chimes"
             case .warmBass:

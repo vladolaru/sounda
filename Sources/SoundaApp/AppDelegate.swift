@@ -20,8 +20,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     init(arguments: [String] = Array(CommandLine.arguments.dropFirst())) {
         self.debugSampleLimit = AppDelegate.cursorDebugSampleLimit(from: arguments)
-        self.settings = .default
-        self.soundMapper = SoundMapper(settings: .default)
+        let initialSettings = SoundaSettings(preset: AppDelegate.initialPreset(from: arguments) ?? SoundaSettings.default.preset)
+        self.settings = initialSettings
+        self.soundMapper = SoundMapper(settings: initialSettings)
         super.init()
     }
 
@@ -123,5 +124,20 @@ private extension AppDelegate {
         }
 
         return max(0, limit)
+    }
+
+    static func initialPreset(from arguments: [String]) -> SoundaSettings.Preset? {
+        guard
+            let flagIndex = arguments.firstIndex(of: "--preset"),
+            arguments.indices.contains(arguments.index(after: flagIndex))
+        else {
+            return nil
+        }
+
+        let rawPreset = arguments[arguments.index(after: flagIndex)].lowercased()
+        return SoundaSettings.Preset.allCases.first { preset in
+            preset.rawValue.lowercased() == rawPreset ||
+                preset.displayName.lowercased().replacingOccurrences(of: " ", with: "-") == rawPreset
+        }
     }
 }

@@ -44,6 +44,16 @@ swift run SoundaApp --pointer-smoke
 
 If macOS blocks event posting, treat the pointer smoke as a skipped/manual check. The MVP intentionally does not include color mode.
 
+Run a scripted public-domain pointer performance while Sounda is already running:
+
+```bash
+swift run SoundaApp --preset ragtime
+swift run SoundaApp --pointer-entertainer-demo 30
+swift run SoundaApp --pointer-ode-demo 30
+```
+
+The pointer performance moves only the cursor, never clicks, restores the starting cursor position, and falls back to direct cursor warping when macOS blocks posted input events.
+
 ## Demo Checklist
 
 1. Run `swift run SoundaApp`.

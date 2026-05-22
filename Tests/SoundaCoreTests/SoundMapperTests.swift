@@ -196,15 +196,19 @@ final class SoundMapperTests: XCTestCase {
 
     func testPresetsProduceDistinctNotesAtSameHorizontalPosition() {
         var minorMapper = SoundMapper(settings: SoundaSettings(preset: .minorPentatonic))
+        var ragtimeMapper = SoundMapper(settings: SoundaSettings(preset: .ragtime))
         var glassMapper = SoundMapper(settings: SoundaSettings(preset: .glassChimes))
         var bassMapper = SoundMapper(settings: SoundaSettings(preset: .warmBass))
 
         let minor = minorMapper.map(frame(normalizedX: 0.75, speed: 1.0))
+        let ragtime = ragtimeMapper.map(frame(normalizedX: 0.75, speed: 1.0))
         let glass = glassMapper.map(frame(normalizedX: 0.75, speed: 1.0))
         let bass = bassMapper.map(frame(normalizedX: 0.75, speed: 1.0))
 
+        XCTAssertNotEqual(minor.displayNoteName, ragtime.displayNoteName)
         XCTAssertNotEqual(minor.displayNoteName, glass.displayNoteName)
         XCTAssertNotEqual(minor.displayNoteName, bass.displayNoteName)
+        XCTAssertLessThan(ragtime.frequency, glass.frequency)
         XCTAssertGreaterThan(glass.frequency, minor.frequency)
         XCTAssertLessThan(bass.frequency, minor.frequency)
     }

@@ -146,13 +146,17 @@ assert(!afterDisabled.accentTriggered, "disabled state should clear previous dir
 assertApproxEqual(afterDisabled.filterBrightness, fresh.filterBrightness, accuracy: 0.0001, "filter brightness after disabled reset")
 
 var minorMapper = SoundMapper(settings: SoundaSettings(preset: .minorPentatonic))
+var ragtimeMapper = SoundMapper(settings: SoundaSettings(preset: .ragtime))
 var glassMapper = SoundMapper(settings: SoundaSettings(preset: .glassChimes))
 var bassMapper = SoundMapper(settings: SoundaSettings(preset: .warmBass))
 let minor = minorMapper.map(frame(normalizedX: 0.75, speed: 1.0))
+let ragtime = ragtimeMapper.map(frame(normalizedX: 0.75, speed: 1.0))
 let glass = glassMapper.map(frame(normalizedX: 0.75, speed: 1.0))
 let bass = bassMapper.map(frame(normalizedX: 0.75, speed: 1.0))
+assert(minor.displayNoteName != ragtime.displayNoteName, "ragtime preset should pick distinct notes")
 assert(minor.displayNoteName != glass.displayNoteName, "glass preset should pick distinct notes")
 assert(minor.displayNoteName != bass.displayNoteName, "bass preset should pick distinct notes")
+assert(ragtime.frequency < glass.frequency, "ragtime preset should sit below the glass preset")
 assert(glass.frequency > minor.frequency, "glass preset should sit above the default preset")
 assert(bass.frequency < minor.frequency, "bass preset should sit below the default preset")
 

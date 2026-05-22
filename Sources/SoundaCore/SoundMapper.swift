@@ -78,11 +78,13 @@ public struct SoundMapper: Sendable {
 }
 
 private let minorPentatonicSemitones = [0, 3, 5, 7, 10, 12, 15, 17, 19, 22, 24]
+private let glassChimeSemitones = [12, 15, 19, 22, 24, 27, 31, 34, 36]
+private let warmBassSemitones = [-24, -22, -19, -17, -14, -12, -10, -7, -5, -2, 0]
 private let baseFrequency = 261.6255653005986
-private let attackSmoothing = 0.65
-private let releaseSmoothing = 0.35
-private let accentDirectionThreshold = Double.pi * 0.65
-private let accentCooldown = 0.25
+private let attackSmoothing = 0.70
+private let releaseSmoothing = 0.32
+private let accentDirectionThreshold = Double.pi * 0.58
+private let accentCooldown = 0.20
 private let silentAmplitudeEpsilon = 0.001
 
 private extension SoundMapper {
@@ -128,10 +130,11 @@ private extension SoundMapper {
     ) -> (name: String, frequency: Double) {
         switch preset {
         case .minorPentatonic:
-            let index = Int((normalizedX * Double(minorPentatonicSemitones.count - 1)).rounded())
-            let semitone = minorPentatonicSemitones[clamp(index, lower: 0, upper: minorPentatonicSemitones.count - 1)]
-            let frequency = baseFrequency * pow(2, Double(semitone) / 12)
-            return (noteName(forSemitone: semitone), frequency)
+            return noteForPosition(normalizedX, semitones: minorPentatonicSemitones)
+        case .glassChimes:
+            return noteForPosition(normalizedX, semitones: glassChimeSemitones)
+        case .warmBass:
+            return noteForPosition(normalizedX, semitones: warmBassSemitones)
         }
     }
 
@@ -141,7 +144,8 @@ private extension SoundMapper {
         }
 
         let usableRange = max(0.0001, 1 - sensitivity)
-        return clamp((speed - sensitivity) / usableRange, lower: 0, upper: 1)
+        let linearIntensity = clamp((speed - sensitivity) / usableRange, lower: 0, upper: 1)
+        return pow(linearIntensity, 0.75)
     }
 
     func smooth(current: Double, target: Double) -> Double {
@@ -150,10 +154,18 @@ private extension SoundMapper {
     }
 }
 
+private func noteForPosition(_ normalizedX: Double, semitones: [Int]) -> (name: String, frequency: Double) {
+    let index = Int((normalizedX * Double(semitones.count - 1)).rounded())
+    let semitone = semitones[clamp(index, lower: 0, upper: semitones.count - 1)]
+    let frequency = baseFrequency * pow(2, Double(semitone) / 12)
+    return (noteName(forSemitone: semitone), frequency)
+}
+
 private func noteName(forSemitone semitone: Int) -> String {
     let names = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"]
-    let octave = 4 + semitone / 12
-    return "\(names[semitone % 12])\(octave)"
+    let noteIndex = (semitone % 12 + 12) % 12
+    let octaveOffset = Int(floor(Double(semitone) / 12))
+    return "\(names[noteIndex])\(4 + octaveOffset)"
 }
 
 private func clampedAngle(_ angle: Double) -> Double {

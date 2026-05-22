@@ -7,9 +7,9 @@ public struct SoundaSettings: Equatable, Sendable {
 
     public init(
         isEnabled: Bool = true,
-        masterVolume: Double = 0.6,
-        sensitivity: Double = 0.2,
-        accentAmount: Double = 0.5,
+        masterVolume: Double = 0.42,
+        sensitivity: Double = 0.32,
+        accentAmount: Double = 0.68,
         preset: Preset = .minorPentatonic
     ) {
         self.isEnabled = isEnabled
@@ -21,8 +21,21 @@ public struct SoundaSettings: Equatable, Sendable {
 }
 
 public extension SoundaSettings {
-    enum Preset: String, Equatable, Sendable {
+    enum Preset: String, CaseIterable, Equatable, Sendable {
         case minorPentatonic
+        case glassChimes
+        case warmBass
+
+        public var displayName: String {
+            switch self {
+            case .minorPentatonic:
+                return "Minor pentatonic"
+            case .glassChimes:
+                return "Glass chimes"
+            case .warmBass:
+                return "Warm bass"
+            }
+        }
     }
 
     static let `default` = SoundaSettings()

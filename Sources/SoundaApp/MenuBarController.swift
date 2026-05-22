@@ -72,9 +72,9 @@ private final class SoundaControlsViewController: NSViewController {
     private let onQuit: () -> Void
 
     private let enabledButton = NSButton(checkboxWithTitle: "Enabled", target: nil, action: nil)
-    private let volumeSlider = NSSlider(value: 0, minValue: 0, maxValue: 1, target: nil, action: nil)
-    private let sensitivitySlider = NSSlider(value: 0, minValue: 0, maxValue: 1, target: nil, action: nil)
-    private let accentSlider = NSSlider(value: 0, minValue: 0, maxValue: 1, target: nil, action: nil)
+    private let volumeSlider = NSSlider(value: 0, minValue: 0, maxValue: 0.85, target: nil, action: nil)
+    private let sensitivitySlider = NSSlider(value: 0, minValue: 0.08, maxValue: 0.70, target: nil, action: nil)
+    private let accentSlider = NSSlider(value: 0, minValue: 0, maxValue: 0.95, target: nil, action: nil)
     private let presetPopUp = NSPopUpButton(frame: .zero, pullsDown: false)
     private let intensityValueLabel = NSTextField(labelWithString: "0%")
     private let noteValueLabel = NSTextField(labelWithString: "Silence")
@@ -108,7 +108,7 @@ private final class SoundaControlsViewController: NSViewController {
 
     func updateReadout(_ soundState: SoundState) {
         let intensity = Int((soundState.amplitude * 100).rounded())
-        intensityValueLabel.stringValue = "\(intensity)%"
+        intensityValueLabel.stringValue = intensity > 0 ? "\(intensity)%" : "Quiet"
         noteValueLabel.stringValue = soundState.displayNoteName
     }
 
@@ -185,7 +185,9 @@ private extension SoundaControlsViewController {
         let titleLabel = NSTextField(labelWithString: "Preset")
         titleLabel.font = .systemFont(ofSize: 12, weight: .medium)
 
-        presetPopUp.addItem(withTitle: "Minor pentatonic")
+        for preset in SoundaSettings.Preset.allCases {
+            presetPopUp.addItem(withTitle: preset.displayName)
+        }
         presetPopUp.target = self
         presetPopUp.action = #selector(presetChanged(_:))
         presetPopUp.controlSize = .small
@@ -224,7 +226,8 @@ private extension SoundaControlsViewController {
         volumeSlider.doubleValue = settings.masterVolume
         sensitivitySlider.doubleValue = settings.sensitivity
         accentSlider.doubleValue = settings.accentAmount
-        presetPopUp.selectItem(at: 0)
+        let presetIndex = SoundaSettings.Preset.allCases.firstIndex(of: settings.preset) ?? 0
+        presetPopUp.selectItem(at: presetIndex)
     }
 
     func publishSettings() {
@@ -252,11 +255,16 @@ private extension SoundaControlsViewController {
     }
 
     @objc func presetChanged(_ sender: NSPopUpButton) {
-        settings.preset = .minorPentatonic
+        let presets = SoundaSettings.Preset.allCases
+        settings.preset = presets[clamp(sender.indexOfSelectedItem, lower: 0, upper: presets.count - 1)]
         publishSettings()
     }
 
     @objc func quit(_ sender: NSButton) {
         onQuit()
+    }
+
+    func clamp(_ value: Int, lower: Int, upper: Int) -> Int {
+        min(max(value, lower), upper)
     }
 }

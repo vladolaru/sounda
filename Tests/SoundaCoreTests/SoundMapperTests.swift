@@ -22,6 +22,25 @@ final class SoundMapperTests: XCTestCase {
         XCTAssertGreaterThan(state.amplitude, 0)
     }
 
+    func testDefaultSensitivityKeepsOrdinaryPointerMovementSilent() {
+        var mapper = SoundMapper(settings: .default)
+
+        let state = mapper.map(frame(speed: 0.18))
+
+        XCTAssertTrue(state.isSilent)
+        XCTAssertEqual(state.amplitude, 0, accuracy: 0.0001)
+    }
+
+    func testModeratelyFastMovementBecomesAudibleWithDefaultSettings() {
+        var mapper = SoundMapper(settings: .default)
+
+        let state = mapper.map(frame(speed: 0.55))
+
+        XCTAssertFalse(state.isSilent)
+        XCTAssertGreaterThan(state.amplitude, 0.05)
+        XCTAssertLessThan(state.amplitude, 0.30)
+    }
+
     func testHorizontalPositionMapsToMinorPentatonicNotesAcrossTwoOctaves() {
         var mapper = SoundMapper(settings: .default)
 
@@ -64,6 +83,19 @@ final class SoundMapperTests: XCTestCase {
         XCTAssertTrue(firstAccent.accentTriggered)
         XCTAssertFalse(cooledDown.accentTriggered)
         XCTAssertEqual(cooledDown.accentIntensity, 0, accuracy: 0.0001)
+    }
+
+    func testAccentCooldownAllowsPlayfulSharpTurnsWithoutStutter() {
+        var mapper = SoundMapper(settings: .default)
+
+        _ = mapper.map(frame(timestamp: 0, speed: 1.0, directionAngle: 0))
+        let firstAccent = mapper.map(frame(timestamp: 0.2, speed: 1.0, directionAngle: .pi))
+        let stutterBlocked = mapper.map(frame(timestamp: 0.32, speed: 1.0, directionAngle: 0))
+        let playfulTurn = mapper.map(frame(timestamp: 0.40, speed: 1.0, directionAngle: .pi))
+
+        XCTAssertTrue(firstAccent.accentTriggered)
+        XCTAssertFalse(stutterBlocked.accentTriggered)
+        XCTAssertTrue(playfulTurn.accentTriggered)
     }
 
     func testAccentDoesNotTriggerAtExactSensitivityThreshold() {
@@ -160,6 +192,21 @@ final class SoundMapperTests: XCTestCase {
         XCTAssertEqual(disabled.filterBrightness, 0, accuracy: 0.0001)
         XCTAssertFalse(afterDisabled.accentTriggered)
         XCTAssertEqual(afterDisabled.filterBrightness, fresh.filterBrightness, accuracy: 0.0001)
+    }
+
+    func testPresetsProduceDistinctNotesAtSameHorizontalPosition() {
+        var minorMapper = SoundMapper(settings: SoundaSettings(preset: .minorPentatonic))
+        var glassMapper = SoundMapper(settings: SoundaSettings(preset: .glassChimes))
+        var bassMapper = SoundMapper(settings: SoundaSettings(preset: .warmBass))
+
+        let minor = minorMapper.map(frame(normalizedX: 0.75, speed: 1.0))
+        let glass = glassMapper.map(frame(normalizedX: 0.75, speed: 1.0))
+        let bass = bassMapper.map(frame(normalizedX: 0.75, speed: 1.0))
+
+        XCTAssertNotEqual(minor.displayNoteName, glass.displayNoteName)
+        XCTAssertNotEqual(minor.displayNoteName, bass.displayNoteName)
+        XCTAssertGreaterThan(glass.frequency, minor.frequency)
+        XCTAssertLessThan(bass.frequency, minor.frequency)
     }
 
     func testNonFiniteInputsMapToFiniteSafeOutput() {

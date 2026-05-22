@@ -109,8 +109,11 @@ private final class AudioRenderState {
     private let lock = NSLock()
     private var targetFrequency = 0.0
     private var targetAmplitude = 0.0
+    private var targetBrightness = 0.0
     private var currentAmplitude = 0.0
+    private var currentBrightness = 0.0
     private var phase = 0.0
+    private var overtonePhase = 0.0
     private var muted = true
     private var accents: [AccentVoice] = []
     private var pendingAccents: [AccentVoice] = []
@@ -120,11 +123,12 @@ private final class AudioRenderState {
         muted = isMuted || soundState.isSilent
         targetFrequency = sanitizedFrequency(soundState.frequency)
         targetAmplitude = muted ? 0 : sanitizedUnit(soundState.amplitude)
+        targetBrightness = muted ? 0 : sanitizedUnit(soundState.filterBrightness)
 
         if soundState.accentTriggered, !muted {
             pendingAccents.append(
                 AccentVoice(
-                    frequency: targetFrequency * 2,
+                    frequency: targetFrequency * 2.5,
                     amplitude: sanitizedUnit(soundState.accentIntensity),
                     phase: 0,
                     age: 0
@@ -143,6 +147,7 @@ private final class AudioRenderState {
         muted = isMuted
         if isMuted {
             targetAmplitude = 0
+            targetBrightness = 0
             accents.removeAll(keepingCapacity: true)
             pendingAccents.removeAll(keepingCapacity: true)
         }
@@ -182,6 +187,7 @@ private final class AudioRenderState {
         lock.lock()
         let frequency = targetFrequency
         var amplitude = targetAmplitude
+        var brightness = targetBrightness
         let isMuted = muted
         var localAccents = accents
         localAccents.append(contentsOf: pendingAccents)
@@ -193,15 +199,23 @@ private final class AudioRenderState {
 
         if isMuted {
             amplitude = 0
+            brightness = 0
         }
 
         let amplitudeStep = (amplitude - currentAmplitude) / Double(frameCount)
+        let brightnessStep = (brightness - currentBrightness) / Double(frameCount)
         let phaseIncrement = twoPi * frequency / sampleRate
+        let overtonePhaseIncrement = phaseIncrement * 2
 
         for _ in 0..<frameCount {
             currentAmplitude += amplitudeStep
+            currentBrightness += brightnessStep
 
-            let leadSample = sin(phase) * currentAmplitude
+            let overtoneMix = currentBrightness * 0.28
+            let leadSample = (
+                sin(phase) * (1 - overtoneMix)
+                    + sin(overtonePhase) * overtoneMix
+            ) * currentAmplitude
             var accentSample = 0.0
 
             for accentIndex in localAccents.indices {
@@ -214,6 +228,7 @@ private final class AudioRenderState {
             }
 
             phase = wrappedPhase(phase + phaseIncrement)
+            overtonePhase = wrappedPhase(overtonePhase + overtonePhaseIncrement)
             let sample = Float(max(-1, min(1, leadSample + accentSample)))
             observe(sample, Float(accentSample))
         }
@@ -250,9 +265,9 @@ private struct AccentVoice {
 }
 
 private let twoPi = Double.pi * 2
-private let maxAccentVoices = 8
-private let accentDuration = 0.9
-private let accentDecay = 8.0
+private let maxAccentVoices = 5
+private let accentDuration = 0.65
+private let accentDecay = 11.0
 private let accentSilenceThreshold = 0.0005
 
 private func wrappedPhase(_ phase: Double) -> Double {

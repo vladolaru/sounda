@@ -1,6 +1,6 @@
 # Sounda Menu Bar Instrument Design
 
-Last updated: 2026-05-22 18:30
+Last updated: 2026-05-22 18:33
 
 ## Purpose
 
@@ -22,12 +22,16 @@ The first demo includes:
 
 ## Architecture
 
-Use a small native Swift/SwiftUI macOS app. Keep the system split into focused units so the sound mapping can be tuned quickly without touching platform or audio code.
+Use a small native Swift macOS app. For the hackathon build, start as a Swift Package executable that creates an AppKit status bar item and runs an `NSApplication` event loop. This fits the current local toolchain, which has the Swift command-line tools available but does not have the full Xcode app selected for `xcodebuild`.
 
-- `MenuBarApp`: owns the status bar item and SwiftUI popover controls.
+SwiftUI can still be used for the control surface by hosting a SwiftUI view in an AppKit popover. A full Xcode project, `MenuBarExtra` scene, signed `.app` bundle, or installer can come later if the demo needs packaging.
+
+Keep the system split into focused units so the sound mapping can be tuned quickly without touching platform or audio code.
+
+- `MenuBarApp`: owns the AppKit status bar item and control popover.
 - `CursorTracker`: samples global mouse location and computes movement features.
 - `SoundMapper`: converts movement features into musical state.
-- `AudioEngine`: owns `AVAudioEngine` audio generation for the lead synth and accents.
+- `AudioEngine`: owns `AVAudioEngine` and `AVAudioSourceNode` audio generation for the lead synth and accents.
 - `ScreenSampler`: optional color sampler used only when color mode is enabled.
 
 Core data flow:
@@ -58,6 +62,17 @@ The MVP should sound musical before it is clever. Raw cursor values should be co
 
 Default scale should be minor pentatonic. That keeps movement expressive without producing harsh note clashes.
 
+## Audio Implementation
+
+Use native Apple audio APIs for the MVP:
+
+- `AVAudioEngine` owns the real-time audio graph.
+- `AVAudioSourceNode` generates the lead synth from the latest `SoundState`.
+- Short chime accents are generated as decaying sine bursts inside the same source node or a second lightweight source node.
+- Built-in AVAudioUnit effects, such as delay or reverb, may be added only after the dry synth voice works.
+
+Avoid third-party audio dependencies in the first pass. AudioKit is a credible fallback if native oscillator/envelope work starts costing more time than expected, but it should not be the default dependency for the hackathon MVP.
+
 ## Controls
 
 The control popover should stay small and useful for live tuning:
@@ -78,10 +93,12 @@ Color mode is a bonus feature, not a dependency for the core demo. Movement rema
 
 If implemented:
 
+- Use ScreenCaptureKit for screen sampling.
 - Hue changes timbre.
 - Brightness changes filter brightness.
 - Saturation changes accent density.
-- Missing screen capture permission makes color mode unavailable without breaking movement-only playback.
+- Missing screen recording permission makes color mode unavailable without breaking movement-only playback.
+- If the system requires an app restart after granting permission, show that state in the popover instead of blocking the core instrument.
 
 ## Permissions And Failure Modes
 

@@ -1,4 +1,4 @@
-Last updated: 2026-05-22 18:30
+Last updated: 2026-05-22 18:33
 
 > **Prompt:** "$brainstorming You are a thinking partner with a technical product streak. You goal is to help me quickly shape a hackathon project that is meant to be shipped really fast and be really fun."
 > **Follow-up:** "My idea goes like this: have a MacOS app (or a background process if it works) that will generate various musical sounds depending on mouse movements (speed, etc) and maybe what is underneeth the mouse cursor (colors, etc)"
@@ -17,6 +17,7 @@ Last updated: 2026-05-22 18:30
 > **Follow-up:** "yes"
 > **Follow-up:** "yes"
 > **Follow-up:** "yes"
+> **Follow-up:** "self review. If you need to search the web to ground your approach and available libraries and such do it"
 
 # Hackathon Brainstorming Notes
 
@@ -65,3 +66,32 @@ Last updated: 2026-05-22 18:30
   - Hue changes timbre if color mode is implemented.
   - Direction changes trigger chime accents.
   - The default scale is minor pentatonic.
+
+## Grounded Self-Review
+
+### Sources Checked
+
+- Apple developer documentation for `MenuBarExtra`: confirms a SwiftUI menu bar scene exists on macOS 13+.
+- Apple developer documentation for `NSStatusBar` and `NSStatusItem`: confirms AppKit can create status bar items in the system-wide menu bar.
+- Apple developer documentation for `NSEvent.mouseLocation`: confirms it reports the current mouse position in screen coordinates.
+- Apple developer documentation for `AVAudioEngine`: confirms it manages real-time audio node graphs and supports `start()`, `prepare()`, and attached nodes.
+- Apple developer documentation for `AVAudioSourceNode`: confirms it supplies generated audio data and is available on macOS 10.15+.
+- Apple developer documentation for ScreenCaptureKit: confirms it supports high-performance screen capture on macOS 12.3+.
+- Apple ScreenCaptureKit sample: confirms screen recording permission is prompted on first run and may require restart after granting permission.
+- Context7 AudioKit docs: confirms AudioKit offers `AudioEngine` and oscillator abstractions with frequency/amplitude parameters.
+- Local environment check: macOS 26.5, Swift CLI 6.3.2 available, full Xcode app not selected for `xcodebuild`.
+
+### Findings
+
+- The original native direction is viable.
+- The original spec was too implicit about the menu bar implementation. `MenuBarExtra` is elegant, but the current local environment favors a Swift Package executable using AppKit `NSStatusItem`, with SwiftUI hosted in a popover if useful.
+- The original spec was too broad on audio implementation. Native `AVAudioEngine` + `AVAudioSourceNode` is enough for the first synth and chime accents. AudioKit is useful, but it should remain a fallback to avoid dependency and setup overhead.
+- The original spec correctly treated color mode as optional. ScreenCaptureKit and screen recording permission make it the riskiest part of the demo.
+
+### Spec Updates Applied
+
+- Added a build/toolchain constraint: start with a Swift Package executable and AppKit status item.
+- Updated `MenuBarApp` to own an AppKit status bar item/control popover.
+- Updated `AudioEngine` to explicitly use `AVAudioEngine` and `AVAudioSourceNode`.
+- Added an `Audio Implementation` section that keeps AudioKit as an optional fallback.
+- Updated color mode to use ScreenCaptureKit and handle screen recording permission/restart states gracefully.

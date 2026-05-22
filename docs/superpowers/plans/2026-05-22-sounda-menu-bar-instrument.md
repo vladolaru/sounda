@@ -144,17 +144,17 @@ This plan is intentionally goal-oriented rather than code-prescriptive. The impl
 - Create: `Sources/SoundaApp/MenuBarController.swift`
 - Modify: `Sources/SoundaApp/main.swift`
 
-- [ ] **Step 1: Introduce app lifecycle ownership**
+- [x] **Step 1: Introduce app lifecycle ownership**
   - Move startup wiring into `AppDelegate`.
   - Keep references to `MenuBarController`, `CursorTracker`, `SoundMapper`, and settings.
   - Ensure the app can quit cleanly from a menu item or popover action.
 
-- [ ] **Step 2: Create the status bar item**
+- [x] **Step 2: Create the status bar item**
   - Use `NSStatusBar.system.statusItem`.
   - Give it a recognizable short title or system image.
   - Clicking the item should open a compact control popover or menu.
 
-- [ ] **Step 3: Add MVP controls**
+- [x] **Step 3: Add MVP controls**
   - Enable/mute toggle.
   - Master volume slider.
   - Sensitivity slider.
@@ -163,17 +163,17 @@ This plan is intentionally goal-oriented rather than code-prescriptive. The impl
   - Readout for current movement intensity and note name.
   - Show color mode as disabled or experimental; do not implement sampling yet.
 
-- [ ] **Step 4: Wire settings**
+- [x] **Step 4: Wire settings**
   - Control changes should update shared `SoundaSettings`.
   - Cursor frames should map through `SoundMapper` using current settings.
   - The debug readout should update from the latest `SoundState`.
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
   - Run: `swift run SoundaApp`
   - Expected: menu bar item appears.
   - Expected: controls open, settings change, and quit works.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
   - Commit message: `feat: add menu bar control surface`
 
 ## Task 5: Add Native Audio Synthesis

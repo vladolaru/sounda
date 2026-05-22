@@ -293,7 +293,7 @@ This plan is intentionally goal-oriented rather than code-prescriptive. The impl
 - Modify: `README.md`
 - Optionally modify: `docs/superpowers/specs/2026-05-22-sounda-menu-bar-instrument-design.md` if implementation decisions materially differ from the approved design.
 
-- [ ] **Step 1: Update README**
+- [x] **Step 1: Update README**
   - Explain what Sounda does in one short paragraph.
   - Add prerequisites: macOS, Swift command-line tools.
   - Add run command: `swift run SoundaApp`.
@@ -301,7 +301,7 @@ This plan is intentionally goal-oriented rather than code-prescriptive. The impl
   - Add the manual demo checklist.
   - Note that color mode is intentionally not part of the MVP unless it was implemented.
 
-- [ ] **Step 2: Verify docs and build**
+- [x] **Step 2: Verify docs and build**
   - Run: `swift test`
   - Expected: tests pass.
   - Run: `swift build`
@@ -309,7 +309,7 @@ This plan is intentionally goal-oriented rather than code-prescriptive. The impl
   - Run: `git diff --check`
   - Expected: no whitespace errors.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
   - Commit message: `docs: explain Sounda demo workflow`
 
 ## Optional Task 9: Add Color Mode Only If Time Remains

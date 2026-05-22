@@ -183,30 +183,30 @@ This plan is intentionally goal-oriented rather than code-prescriptive. The impl
 - Modify: `Sources/SoundaApp/AppDelegate.swift`
 - Modify: `Sources/SoundaApp/MenuBarController.swift`
 
-- [ ] **Step 1: Build the audio controller**
+- [x] **Step 1: Build the audio controller**
   - Own an `AVAudioEngine`.
   - Use `AVAudioSourceNode` to generate the lead voice from the latest `SoundState`.
   - Keep audio render state thread-safe and lightweight.
   - Expose start, stop, mute/update-state, and error state.
 
-- [ ] **Step 2: Implement the lead synth**
+- [x] **Step 2: Implement the lead synth**
   - Generate a simple sine or triangle-like voice.
   - Use `SoundState.frequency` and `SoundState.amplitude`.
   - Apply smooth amplitude changes to avoid clicks.
   - Keep the dry voice working before adding effects.
 
-- [ ] **Step 3: Implement chime accents**
+- [x] **Step 3: Implement chime accents**
   - Trigger short decaying sine bursts from `SoundState` accent events.
   - Respect accent amount and master volume.
   - Avoid unbounded accent accumulation.
 
-- [ ] **Step 4: Wire audio to app state**
+- [x] **Step 4: Wire audio to app state**
   - Start audio when Sounda is enabled.
   - Send updated `SoundState` from cursor tracking into `AudioEngineController`.
   - Stop or silence audio when muted.
   - Surface audio startup failures in the control popover.
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
   - Run: `swift run SoundaApp`
   - Expected: enabling Sounda starts audio.
   - Expected: fast cursor movement fades in the lead voice.
@@ -215,7 +215,7 @@ This plan is intentionally goal-oriented rather than code-prescriptive. The impl
   - Run: `swift test`
   - Expected: core mapping tests still pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
   - Commit message: `feat: synthesize cursor-driven audio`
 
 ## Task 6: Add E2E Diagnostics

@@ -6,7 +6,7 @@
 
 **Architecture:** Start with a Swift Package executable so the project can build with the currently available Swift command-line tools. Keep musical mapping in a pure `SoundaCore` library, and keep AppKit cursor/menu-bar code plus AVAudioEngine synthesis in the executable target. Color sampling stays out of the MVP unless the cursor instrument is already working.
 
-**Tech Stack:** Swift Package Manager, Swift, AppKit `NSStatusItem`, AppKit `NSEvent.mouseLocation`, AVFAudio `AVAudioEngine`, AVFAudio `AVAudioSourceNode`, XCTest.
+**Tech Stack:** Swift Package Manager, Swift, AppKit `NSStatusItem`, AppKit `NSEvent.mouseLocation`, AVFAudio `AVAudioEngine`, AVFAudio `AVAudioSourceNode`, XCTest where available, and a CLI smoke runner for CommandLineTools environments without XCTest or Swift Testing.
 
 ---
 
@@ -16,12 +16,13 @@ This plan is intentionally goal-oriented rather than code-prescriptive. The impl
 
 ## File Structure
 
-- Create `Package.swift`: defines `SoundaCore`, `SoundaApp`, and `SoundaCoreTests`.
+- Create `Package.swift`: defines `SoundaCore`, `SoundaApp`, `SoundaCoreSmokeTests`, and `SoundaCoreTests`.
 - Create `Sources/SoundaCore/CursorFrame.swift`: pure cursor movement input model.
 - Create `Sources/SoundaCore/SoundState.swift`: pure musical output model consumed by audio.
 - Create `Sources/SoundaCore/SoundaSettings.swift`: volume, sensitivity, accent amount, preset.
 - Create `Sources/SoundaCore/SoundMapper.swift`: movement-to-music mapping and accent cooldown.
 - Create `Sources/SoundaApp/main.swift`: starts `NSApplication` and wires app services.
+- Create `Sources/SoundaCoreSmokeTests/main.swift`: executable smoke runner for toolchains where `swift test` only builds because XCTest and Swift Testing are unavailable.
 - Create `Sources/SoundaApp/AppDelegate.swift`: lifecycle owner for menu bar, tracker, mapper, audio.
 - Create `Sources/SoundaApp/MenuBarController.swift`: AppKit status item and popover controls.
 - Create `Sources/SoundaApp/CursorTracker.swift`: polls global cursor location and emits `CursorFrame`.
@@ -39,12 +40,14 @@ This plan is intentionally goal-oriented rather than code-prescriptive. The impl
 - Create: `Sources/SoundaCore/SoundState.swift`
 - Create: `Sources/SoundaCore/SoundMapper.swift`
 - Create: `Sources/SoundaApp/main.swift`
+- Create: `Sources/SoundaCoreSmokeTests/main.swift`
 - Create: `Tests/SoundaCoreTests/SoundMapperTests.swift`
 
 - [ ] **Step 1: Create the package manifest**
   - Define a macOS-only Swift package.
   - Define library target `SoundaCore`.
   - Define executable target `SoundaApp` depending on `SoundaCore`.
+  - Define executable target `SoundaCoreSmokeTests` depending on `SoundaCore`.
   - Define test target `SoundaCoreTests` depending on `SoundaCore`.
   - Avoid third-party dependencies.
 
@@ -58,13 +61,16 @@ This plan is intentionally goal-oriented rather than code-prescriptive. The impl
   - It does not need to create the menu bar item yet.
 
 - [ ] **Step 4: Add a smoke test**
-  - Add one XCTest that constructs `SoundMapper` with default settings and maps a basic cursor frame without crashing.
+  - Add one XCTest that constructs `SoundMapper` with default settings and maps a basic cursor frame without crashing for full Xcode/XCTest environments.
+  - Add a `SoundaCoreSmokeTests` executable that constructs `SoundMapper`, maps a basic cursor frame, asserts the expected silent bootstrap state, prints a concise success message, and exits non-zero on failure.
 
 - [ ] **Step 5: Verify**
   - Run: `swift build`
   - Expected: package builds.
   - Run: `swift test`
-  - Expected: smoke test passes.
+  - Expected: package test target remains compatible. In the current CommandLineTools environment, XCTest and Swift Testing are unavailable, so this may only build the test target.
+  - Run: `swift run SoundaCoreSmokeTests`
+  - Expected: smoke assertion executes and prints `SoundaCore smoke test passed`.
 
 - [ ] **Step 6: Commit**
   - Commit message: `chore: scaffold Swift package`

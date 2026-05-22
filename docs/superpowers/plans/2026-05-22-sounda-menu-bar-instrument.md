@@ -84,12 +84,12 @@ This plan is intentionally goal-oriented rather than code-prescriptive. The impl
 - Modify: `Sources/SoundaCore/SoundMapper.swift`
 - Modify: `Tests/SoundaCoreTests/SoundMapperTests.swift`
 
-- [ ] **Step 1: Define stable core models**
+- [x] **Step 1: Define stable core models**
   - `CursorFrame` should carry timestamp, normalized X/Y, speed, acceleration, and direction angle.
   - `SoundState` should carry enabled/silent state, frequency, amplitude, filter brightness, accent trigger, accent intensity, and display note name.
   - `SoundaSettings` should carry enabled, master volume, sensitivity, accent amount, and preset.
 
-- [ ] **Step 2: Add mapping tests**
+- [x] **Step 2: Add mapping tests**
   - Slow movement below sensitivity maps to silence.
   - Fast movement maps to non-zero amplitude.
   - Horizontal position maps to a minor pentatonic note across two octaves.
@@ -98,18 +98,18 @@ This plan is intentionally goal-oriented rather than code-prescriptive. The impl
   - Accent cooldown prevents repeated rapid accents.
   - Stopping movement fades toward silence rather than hard-cutting.
 
-- [ ] **Step 3: Implement the mapper**
+- [x] **Step 3: Implement the mapper**
   - Use a minor pentatonic scale as the default preset.
   - Clamp normalized inputs defensively.
   - Smooth amplitude/filter output enough to avoid jitter.
   - Track previous direction and last accent time inside `SoundMapper`.
   - Keep the mapper deterministic under fake timestamps.
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
   - Run: `swift test`
   - Expected: all `SoundaCoreTests` pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
   - Commit message: `feat: map cursor movement to sound state`
 
 ## Task 3: Add Global Cursor Tracking

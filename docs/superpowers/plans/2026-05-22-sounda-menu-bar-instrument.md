@@ -26,6 +26,7 @@ This plan is intentionally goal-oriented rather than code-prescriptive. The impl
 - Create `Sources/SoundaApp/MenuBarController.swift`: AppKit status item and popover controls.
 - Create `Sources/SoundaApp/CursorTracker.swift`: polls global cursor location and emits `CursorFrame`.
 - Create `Sources/SoundaApp/AudioEngineController.swift`: owns `AVAudioEngine` and generated synth/chime audio.
+- Create `Sources/SoundaApp/DiagnosticsRunner.swift`: deterministic cursor-to-audio self-test harness.
 - Create `Tests/SoundaCoreTests/SoundMapperTests.swift`: regression tests for the musical mapping.
 - Modify `README.md`: short run instructions and demo checklist.
 
@@ -211,7 +212,40 @@ This plan is intentionally goal-oriented rather than code-prescriptive. The impl
 - [ ] **Step 6: Commit**
   - Commit message: `feat: synthesize cursor-driven audio`
 
-## Task 6: Tune The Demo Loop
+## Task 6: Add E2E Diagnostics
+
+**Files:**
+- Create: `Sources/SoundaApp/DiagnosticsRunner.swift`
+- Modify: `Sources/SoundaApp/AudioEngineController.swift`
+- Modify: `Sources/SoundaApp/main.swift`
+- Modify: `Sources/SoundaApp/AppDelegate.swift`
+- Modify: `README.md`
+
+- [ ] **Step 1: Add deterministic cursor replay**
+  - Add a diagnostics path that replays a short sequence of synthetic `CursorFrame` values through `SoundMapper`.
+  - Include at least three replay segments: still/slow movement, fast horizontal movement, and sharp direction changes.
+  - Prefer a command-line flag such as `swift run SoundaApp --self-test` so this can run without manually using the menu bar.
+
+- [ ] **Step 2: Add audio observability**
+  - Measure sound generation inside the app process rather than through the microphone or speakers.
+  - Acceptable approaches: install an audio tap on the mixer/source path and measure RMS/peak values from `AVAudioPCMBuffer`, or expose a lightweight debug meter from the same synth renderer used by `AVAudioSourceNode`.
+  - The self-test should distinguish expected silence from expected audible output.
+
+- [ ] **Step 3: Add an optional real-pointer smoke command**
+  - If practical, add a separately named debug command for posting a small Core Graphics mouse movement sequence.
+  - Keep this opt-in only; never move the user's pointer during normal tests.
+  - If Accessibility/security permissions block it, report a clear skipped/manual status rather than failing the core test suite.
+
+- [ ] **Step 4: Verify**
+  - Run: `swift run SoundaApp --self-test`
+  - Expected: slow replay reports silence, fast replay reports non-zero audio, sharp-turn replay reports chime/accent activity.
+  - Run: `swift test`
+  - Expected: core mapping tests still pass.
+
+- [ ] **Step 5: Commit**
+  - Commit message: `test: add cursor audio diagnostics`
+
+## Task 7: Tune The Demo Loop
 
 **Files:**
 - Modify: `Sources/SoundaCore/SoundMapper.swift`
@@ -247,7 +281,7 @@ This plan is intentionally goal-oriented rather than code-prescriptive. The impl
 - [ ] **Step 5: Commit**
   - Commit message: `fix: tune Sounda demo responsiveness`
 
-## Task 7: Document Running And Demoing Sounda
+## Task 8: Document Running And Demoing Sounda
 
 **Files:**
 - Modify: `README.md`
@@ -257,6 +291,7 @@ This plan is intentionally goal-oriented rather than code-prescriptive. The impl
   - Explain what Sounda does in one short paragraph.
   - Add prerequisites: macOS, Swift command-line tools.
   - Add run command: `swift run SoundaApp`.
+  - Add self-test command: `swift run SoundaApp --self-test`.
   - Add the manual demo checklist.
   - Note that color mode is intentionally not part of the MVP unless it was implemented.
 
@@ -271,7 +306,7 @@ This plan is intentionally goal-oriented rather than code-prescriptive. The impl
 - [ ] **Step 3: Commit**
   - Commit message: `docs: explain Sounda demo workflow`
 
-## Optional Task 8: Add Color Mode Only If Time Remains
+## Optional Task 9: Add Color Mode Only If Time Remains
 
 **Files:**
 - Create: `Sources/SoundaApp/ScreenSampler.swift`
@@ -307,6 +342,7 @@ This plan is intentionally goal-oriented rather than code-prescriptive. The impl
 
 - `swift test` passes.
 - `swift build` passes.
+- `swift run SoundaApp --self-test` passes and reports silence/audible/accent checks.
 - `swift run SoundaApp` starts a menu bar process.
 - Menu bar controls can enable/mute, adjust volume, adjust sensitivity, adjust accent amount, switch preset, and quit.
 - Fast cursor motion produces a musical lead voice.

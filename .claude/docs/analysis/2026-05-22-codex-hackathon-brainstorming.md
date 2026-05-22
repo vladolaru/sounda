@@ -1,4 +1,4 @@
-Last updated: 2026-05-22 18:33
+Last updated: 2026-05-22 18:44
 
 > **Prompt:** "$brainstorming You are a thinking partner with a technical product streak. You goal is to help me quickly shape a hackathon project that is meant to be shipped really fast and be really fun."
 > **Follow-up:** "My idea goes like this: have a MacOS app (or a background process if it works) that will generate various musical sounds depending on mouse movements (speed, etc) and maybe what is underneeth the mouse cursor (colors, etc)"
@@ -18,6 +18,8 @@ Last updated: 2026-05-22 18:33
 > **Follow-up:** "yes"
 > **Follow-up:** "yes"
 > **Follow-up:** "self review. If you need to search the web to ground your approach and available libraries and such do it"
+> **Follow-up:** "approve"
+> **Follow-up:** "First. Are there ways you can test things e2e? Detect the sounds, move my mouse, etc?"
 
 # Hackathon Brainstorming Notes
 
@@ -95,3 +97,11 @@ Last updated: 2026-05-22 18:33
 - Updated `AudioEngine` to explicitly use `AVAudioEngine` and `AVAudioSourceNode`.
 - Added an `Audio Implementation` section that keeps AudioKit as an optional fallback.
 - Updated color mode to use ScreenCaptureKit and handle screen recording permission/restart states gracefully.
+
+## E2E Testing Strategy
+
+- The implementation should include deterministic e2e-style checks that replay synthetic cursor movement into the same mapper/audio path used by the app. This is more reliable than moving the user's pointer during automated tests.
+- Sound can be detected in-process by measuring generated audio buffers, not by listening through the microphone or system speakers. Apple audio APIs support audio taps on nodes, and `AVAudioPCMBuffer` exposes sample data that can be reduced to RMS/peak metrics.
+- Real mouse movement is technically possible through Core Graphics mouse events, but it should be a manual smoke test or explicit debug command only because it can steal the user's pointer and may hit Accessibility/security permissions.
+- Full speaker-output detection would require a virtual audio device such as BlackHole or a loopback driver, which is unnecessary for the MVP and too much setup for the hackathon path.
+- Plan update needed: add a focused e2e diagnostics task before final tuning/documentation.

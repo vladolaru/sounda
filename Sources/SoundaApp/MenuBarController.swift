@@ -130,6 +130,11 @@ private extension SoundaControlsViewController {
         colorMode.isEnabled = false
         stackView.addArrangedSubview(colorMode)
 
+        let escapeLabel = NSTextField(labelWithString: "Escape: Control-Option-Command-Q")
+        escapeLabel.font = .systemFont(ofSize: 11)
+        escapeLabel.textColor = .secondaryLabelColor
+        stackView.addArrangedSubview(escapeLabel)
+
         let quitButton = NSButton(title: "Quit Sounda", target: self, action: #selector(quit(_:)))
         quitButton.bezelStyle = .rounded
         stackView.addArrangedSubview(quitButton)

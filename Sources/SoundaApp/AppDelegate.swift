@@ -14,6 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var menuBarController: MenuBarController?
     private var cursorTracker: CursorTracker?
+    private var keyboardEscapeController: KeyboardEscapeController?
     private var soundMapper: SoundMapper
 
     init(arguments: [String] = Array(CommandLine.arguments.dropFirst())) {
@@ -36,6 +37,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         )
         self.menuBarController = menuBarController
+        let keyboardEscapeController = KeyboardEscapeController {
+            NSApplication.shared.terminate(nil)
+        }
+        self.keyboardEscapeController = keyboardEscapeController
 
         let tracker = CursorTracker { [weak self] frame in
             self?.handleCursorFrame(frame)
@@ -43,10 +48,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.cursorTracker = tracker
 
         print("Sounda starting...")
+        print("Escape hatch: press Control-Option-Command-Q, or Ctrl-C from this terminal.")
+        keyboardEscapeController.start()
         tracker.start()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        keyboardEscapeController?.stop()
         cursorTracker?.stop()
     }
 }

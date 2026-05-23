@@ -110,10 +110,16 @@ private final class AudioRenderState {
     private var targetFrequency = 0.0
     private var targetAmplitude = 0.0
     private var targetBrightness = 0.0
+    private var targetOrchestra = AudioOrchestraTarget.silence
     private var currentAmplitude = 0.0
     private var currentBrightness = 0.0
+    private var currentOrchestraAmplitude = 0.0
+    private var currentOrchestraRichness = 0.0
+    private var currentOrchestraMotion = 0.0
     private var phase = 0.0
     private var overtonePhase = 0.0
+    private var orchestraPhases = [0.0, 0.0, 0.0, 0.0]
+    private var orchestraTremoloPhase = 0.0
     private var muted = true
     private var accents: [AccentVoice] = []
     private var pendingAccents: [AccentVoice] = []
@@ -124,6 +130,7 @@ private final class AudioRenderState {
         targetFrequency = sanitizedFrequency(soundState.frequency)
         targetAmplitude = muted ? 0 : sanitizedUnit(soundState.amplitude)
         targetBrightness = muted ? 0 : sanitizedUnit(soundState.filterBrightness)
+        targetOrchestra = muted ? .silence : AudioOrchestraTarget(soundState.orchestra)
 
         if soundState.accentTriggered, !muted {
             pendingAccents.append(
@@ -148,6 +155,7 @@ private final class AudioRenderState {
         if isMuted {
             targetAmplitude = 0
             targetBrightness = 0
+            targetOrchestra = .silence
             accents.removeAll(keepingCapacity: true)
             pendingAccents.removeAll(keepingCapacity: true)
         }
@@ -188,6 +196,7 @@ private final class AudioRenderState {
         let frequency = targetFrequency
         var amplitude = targetAmplitude
         var brightness = targetBrightness
+        var orchestraTarget = targetOrchestra
         let isMuted = muted
         var localAccents = accents
         localAccents.append(contentsOf: pendingAccents)
@@ -200,22 +209,30 @@ private final class AudioRenderState {
         if isMuted {
             amplitude = 0
             brightness = 0
+            orchestraTarget = .silence
         }
 
         let amplitudeStep = (amplitude - currentAmplitude) / Double(frameCount)
         let brightnessStep = (brightness - currentBrightness) / Double(frameCount)
+        let orchestraAmplitudeStep = (orchestraTarget.amplitude - currentOrchestraAmplitude) / Double(frameCount)
+        let orchestraRichnessStep = (orchestraTarget.richness - currentOrchestraRichness) / Double(frameCount)
+        let orchestraMotionStep = (orchestraTarget.motion - currentOrchestraMotion) / Double(frameCount)
         let phaseIncrement = twoPi * frequency / sampleRate
         let overtonePhaseIncrement = phaseIncrement * 2
 
         for _ in 0..<frameCount {
             currentAmplitude += amplitudeStep
             currentBrightness += brightnessStep
+            currentOrchestraAmplitude += orchestraAmplitudeStep
+            currentOrchestraRichness += orchestraRichnessStep
+            currentOrchestraMotion += orchestraMotionStep
 
             let overtoneMix = currentBrightness * 0.28
             let leadSample = (
                 sin(phase) * (1 - overtoneMix)
                     + sin(overtonePhase) * overtoneMix
             ) * currentAmplitude
+            let orchestraSample = renderOrchestraSample(target: orchestraTarget)
             var accentSample = 0.0
 
             for accentIndex in localAccents.indices {
@@ -229,7 +246,7 @@ private final class AudioRenderState {
 
             phase = wrappedPhase(phase + phaseIncrement)
             overtonePhase = wrappedPhase(overtonePhase + overtonePhaseIncrement)
-            let sample = Float(max(-1, min(1, leadSample + accentSample)))
+            let sample = Float(max(-1, min(1, leadSample + orchestraSample + accentSample)))
             observe(sample, Float(accentSample))
         }
 
@@ -255,6 +272,45 @@ private final class AudioRenderState {
             data.assumingMemoryBound(to: Float.self).initialize(repeating: 0, count: frameCount)
         }
     }
+
+    private func renderOrchestraSample(target: AudioOrchestraTarget) -> Double {
+        guard
+            target.voiceCount > 0,
+            currentOrchestraAmplitude > 0,
+            target.rootFrequency > 0,
+            !target.intervalSemitones.isEmpty
+        else {
+            return 0
+        }
+
+        let voiceCount = min(target.voiceCount, maxOrchestraVoices)
+        let padRootFrequency = clamp(target.rootFrequency * 0.5, lower: 55, upper: 1_600)
+        let voiceGain = currentOrchestraAmplitude / sqrt(Double(voiceCount)) * 0.55
+        let harmonicMix = currentOrchestraRichness * 0.22
+        let tremoloRate = 0.28 + currentOrchestraMotion * 4.5
+        let tremoloDepth = currentOrchestraMotion * 0.28
+        var sample = 0.0
+
+        for voiceIndex in 0..<voiceCount {
+            let semitone = target.intervalSemitones[voiceIndex % target.intervalSemitones.count]
+            let detuneDirection = voiceIndex.isMultiple(of: 2) ? -1.0 : 1.0
+            let detune = detuneDirection * target.detuneCents * (0.35 + Double(voiceIndex) * 0.16)
+            let frequency = clamp(
+                padRootFrequency * pow(2, (Double(semitone) + detune / 100) / 12),
+                lower: 45,
+                upper: 3_500
+            )
+            let phase = orchestraPhases[voiceIndex]
+            let tremolo = 1 - tremoloDepth + tremoloDepth * (0.5 + 0.5 * sin(orchestraTremoloPhase + Double(voiceIndex)))
+            let tone = sin(phase) * (1 - harmonicMix) + sin(phase * 2) * harmonicMix
+
+            sample += tone * voiceGain * tremolo
+            orchestraPhases[voiceIndex] = wrappedPhase(phase + twoPi * frequency / sampleRate)
+        }
+
+        orchestraTremoloPhase = wrappedPhase(orchestraTremoloPhase + twoPi * tremoloRate / sampleRate)
+        return sample
+    }
 }
 
 private struct AccentVoice {
@@ -264,8 +320,62 @@ private struct AccentVoice {
     var age: Double
 }
 
+private struct AudioOrchestraTarget {
+    var rootFrequency: Double
+    var amplitude: Double
+    var voiceCount: Int
+    var intervalSemitones: [Int]
+    var richness: Double
+    var motion: Double
+    var detuneCents: Double
+
+    init(_ state: ScreenOrchestraState) {
+        guard state.isActive else {
+            self = .silence
+            return
+        }
+
+        rootFrequency = sanitizedFrequency(state.rootFrequency)
+        amplitude = min(sanitizedUnit(state.amplitude), 0.35)
+        voiceCount = clamp(state.voiceCount, lower: 0, upper: maxOrchestraVoices)
+        intervalSemitones = state.intervalSemitones
+        richness = sanitizedUnit(state.richness)
+        motion = sanitizedUnit(state.motion)
+        detuneCents = clamp(state.detuneCents.isFinite ? state.detuneCents : 0, lower: 0, upper: 16)
+    }
+
+    private init(
+        rootFrequency: Double,
+        amplitude: Double,
+        voiceCount: Int,
+        intervalSemitones: [Int],
+        richness: Double,
+        motion: Double,
+        detuneCents: Double
+    ) {
+        self.rootFrequency = rootFrequency
+        self.amplitude = amplitude
+        self.voiceCount = voiceCount
+        self.intervalSemitones = intervalSemitones
+        self.richness = richness
+        self.motion = motion
+        self.detuneCents = detuneCents
+    }
+
+    static let silence = AudioOrchestraTarget(
+        rootFrequency: 0,
+        amplitude: 0,
+        voiceCount: 0,
+        intervalSemitones: [],
+        richness: 0,
+        motion: 0,
+        detuneCents: 0
+    )
+}
+
 private let twoPi = Double.pi * 2
 private let maxAccentVoices = 5
+private let maxOrchestraVoices = 4
 private let accentDuration = 0.65
 private let accentDecay = 11.0
 private let accentSilenceThreshold = 0.0005
@@ -289,4 +399,12 @@ private func sanitizedUnit(_ value: Double) -> Double {
     }
 
     return min(max(value, 0), 1)
+}
+
+private func clamp(_ value: Double, lower: Double, upper: Double) -> Double {
+    min(max(value, lower), upper)
+}
+
+private func clamp(_ value: Int, lower: Int, upper: Int) -> Int {
+    min(max(value, lower), upper)
 }

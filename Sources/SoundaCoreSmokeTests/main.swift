@@ -193,4 +193,48 @@ assert(features.meanSaturation > 0.6, "screen sampler should report saturation")
 assert(features.contrast > 0.6, "screen sampler should report contrast")
 assertApproxEqual(features.warmth, 0, accuracy: 0.0001, "screen sampler warmth")
 
+var orchestraMapper = ScreenOrchestraMapper()
+let leadForOrchestra = SoundState(
+    isSilent: false,
+    frequency: 440,
+    amplitude: 0.6,
+    filterBrightness: 0.5,
+    accentTriggered: false,
+    accentIntensity: 0,
+    displayNoteName: "A4"
+)
+let quietOrchestra = orchestraMapper.map(lead: leadForOrchestra, features: nil, isEnabled: true)
+assert(quietOrchestra == .silence, "missing screen features should keep orchestra silent")
+
+var dimOrchestraMapper = ScreenOrchestraMapper()
+var brightOrchestraMapper = ScreenOrchestraMapper()
+let dimOrchestra = dimOrchestraMapper.map(
+    lead: leadForOrchestra,
+    features: ScreenSampleFeatures(
+        sampleCount: 576,
+        meanBrightness: 0.12,
+        meanSaturation: 0.25,
+        meanHue: 0.2,
+        contrast: 0.08,
+        warmth: 0.1
+    ),
+    isEnabled: true
+)
+let brightOrchestra = brightOrchestraMapper.map(
+    lead: leadForOrchestra,
+    features: ScreenSampleFeatures(
+        sampleCount: 576,
+        meanBrightness: 0.86,
+        meanSaturation: 0.25,
+        meanHue: 0.2,
+        contrast: 0.08,
+        warmth: 0.1
+    ),
+    isEnabled: true
+)
+assert(dimOrchestra.isActive, "dim sampled screen should still create a quiet orchestra bed")
+assert(brightOrchestra.voiceCount > dimOrchestra.voiceCount, "brighter screen should add orchestra density")
+assert(brightOrchestra.amplitude > dimOrchestra.amplitude, "brighter screen should raise orchestra level")
+assert(brightOrchestra.amplitude <= leadForOrchestra.amplitude * 0.35, "orchestra should stay below the lead")
+
 print("SoundaCore smoke test passed")

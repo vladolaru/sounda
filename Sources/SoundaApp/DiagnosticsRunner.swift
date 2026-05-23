@@ -48,6 +48,41 @@ struct DiagnosticsRunner {
             }
         }
 
+        let orchestraProbe = SoundState(
+            isSilent: false,
+            frequency: 440,
+            amplitude: 0,
+            filterBrightness: 0,
+            accentTriggered: false,
+            accentIntensity: 0,
+            displayNoteName: "A4",
+            orchestra: ScreenOrchestraState(
+                isActive: true,
+                rootFrequency: 440,
+                amplitude: 0.15,
+                voiceCount: 4,
+                intervalSemitones: [0, 4, 7, 14],
+                richness: 0.72,
+                motion: 0.45,
+                detuneCents: 7
+            )
+        )
+        let orchestraMetrics = audioEngine.renderDebugMetrics(for: [orchestraProbe], framesPerState: 4_096)
+        let orchestraPassed = orchestraMetrics.peak > 0.01 && orchestraMetrics.rms > 0.001
+        print(
+            String(
+                format: "screen orchestra replay: %@ rms=%.5f peak=%.5f accentPeak=%.5f",
+                orchestraPassed ? "PASS pad" : "FAIL expected pad",
+                orchestraMetrics.rms,
+                orchestraMetrics.peak,
+                orchestraMetrics.accentPeak
+            )
+        )
+        if !orchestraPassed {
+            didFail = true
+            print("  Expected screen orchestra state to render non-zero pad audio.")
+        }
+
         if didFail {
             print("Sounda self-test failed")
             return 1

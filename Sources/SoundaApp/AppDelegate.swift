@@ -16,7 +16,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var cursorTracker: CursorTracker?
     private var keyboardEscapeController: KeyboardEscapeController?
     private var audioEngineController: AudioEngineController?
+    private var screenRegionSensor: ScreenRegionSensor?
+    private var latestScreenFeatures: ScreenSampleFeatures?
     private var soundMapper: SoundMapper
+    private var screenOrchestraMapper = ScreenOrchestraMapper()
 
     init(arguments: [String] = Array(CommandLine.arguments.dropFirst())) {
         self.debugSampleLimit = AppDelegate.cursorDebugSampleLimit(from: arguments)
@@ -49,6 +52,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.handleCursorFrame(frame)
         }
         self.cursorTracker = tracker
+        screenRegionSensor = ScreenRegionSensor(
+            onSample: { [weak self] features in
+                self?.latestScreenFeatures = features
+            },
+            onStatusChange: { [weak self] status in
+                self?.menuBarController?.updateScreenStatus(status)
+            }
+        )
 
         print("Sounda starting...")
         print("Escape hatch: press Control-Option-Command-Q, or Ctrl-C from this terminal.")
@@ -60,6 +71,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         audioEngineController?.stop()
+        screenRegionSensor?.stop()
         keyboardEscapeController?.stop()
         cursorTracker?.stop()
     }
@@ -81,15 +93,30 @@ private extension AppDelegate {
             menuBarController?.updateAudioStatus(
                 didStart ? "Audio running" : (audioEngineController.errorMessage ?? "Audio unavailable")
             )
+            if settings.screenOrchestraEnabled {
+                screenRegionSensor?.start()
+            } else {
+                latestScreenFeatures = nil
+                screenOrchestraMapper = ScreenOrchestraMapper()
+                screenRegionSensor?.stop()
+            }
         } else {
             audioEngineController.stop()
+            latestScreenFeatures = nil
+            screenOrchestraMapper = ScreenOrchestraMapper()
+            screenRegionSensor?.stop()
             menuBarController?.updateAudioStatus("Audio off")
         }
     }
 
     func handleCursorFrame(_ frame: CursorFrame) {
         soundMapper.settings = settings
-        let soundState = soundMapper.map(frame)
+        var soundState = soundMapper.map(frame)
+        soundState.orchestra = screenOrchestraMapper.map(
+            lead: soundState,
+            features: latestScreenFeatures,
+            isEnabled: settings.screenOrchestraEnabled
+        )
         audioEngineController?.updateState(soundState)
         menuBarController?.updateReadout(soundState)
 

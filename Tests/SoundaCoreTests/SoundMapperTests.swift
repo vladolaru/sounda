@@ -268,6 +268,113 @@ final class SoundMapperTests: XCTestCase {
         XCTAssertTrue(features.contrast.isFinite)
         XCTAssertTrue(features.warmth.isFinite)
     }
+
+    func testScreenOrchestraRequiresLeadAndSamples() {
+        var mapper = ScreenOrchestraMapper()
+        let lead = SoundState(
+            isSilent: false,
+            frequency: 440,
+            amplitude: 0.5,
+            filterBrightness: 0.4,
+            accentTriggered: false,
+            accentIntensity: 0,
+            displayNoteName: "A4"
+        )
+
+        XCTAssertEqual(mapper.map(lead: lead, features: nil, isEnabled: true), .silence)
+        XCTAssertEqual(mapper.map(lead: lead, features: screenFeatures(), isEnabled: false), .silence)
+        XCTAssertEqual(mapper.map(lead: .silence, features: screenFeatures(), isEnabled: true), .silence)
+    }
+
+    func testScreenBrightnessControlsOrchestraDensityAndLevel() {
+        let lead = leadState(amplitude: 0.6)
+        var dimMapper = ScreenOrchestraMapper()
+        var brightMapper = ScreenOrchestraMapper()
+
+        let dim = dimMapper.map(
+            lead: lead,
+            features: screenFeatures(brightness: 0.12, saturation: 0.25, contrast: 0.08),
+            isEnabled: true
+        )
+        let bright = brightMapper.map(
+            lead: lead,
+            features: screenFeatures(brightness: 0.86, saturation: 0.25, contrast: 0.08),
+            isEnabled: true
+        )
+
+        XCTAssertTrue(dim.isActive)
+        XCTAssertTrue(bright.isActive)
+        XCTAssertGreaterThan(bright.voiceCount, dim.voiceCount)
+        XCTAssertGreaterThan(bright.amplitude, dim.amplitude)
+        XCTAssertLessThanOrEqual(bright.amplitude, lead.amplitude * 0.35)
+    }
+
+    func testScreenSaturationAndContrastShapeRichnessAndMotion() {
+        let lead = leadState(amplitude: 0.6)
+        var calmMapper = ScreenOrchestraMapper()
+        var vividMapper = ScreenOrchestraMapper()
+
+        let calm = calmMapper.map(
+            lead: lead,
+            features: screenFeatures(brightness: 0.5, saturation: 0.05, contrast: 0.04),
+            isEnabled: true
+        )
+        let vivid = vividMapper.map(
+            lead: lead,
+            features: screenFeatures(brightness: 0.5, saturation: 0.95, contrast: 0.72),
+            isEnabled: true
+        )
+
+        XCTAssertGreaterThan(vivid.richness, calm.richness)
+        XCTAssertGreaterThan(vivid.detuneCents, calm.detuneCents)
+        XCTAssertGreaterThan(vivid.motion, calm.motion)
+    }
+
+    func testWarmAndCoolScreensChooseDifferentHarmonyColors() {
+        let lead = leadState(amplitude: 0.6)
+        var warmMapper = ScreenOrchestraMapper()
+        var coolMapper = ScreenOrchestraMapper()
+
+        let warm = warmMapper.map(
+            lead: lead,
+            features: screenFeatures(hue: 0.05, warmth: 0.7),
+            isEnabled: true
+        )
+        let cool = coolMapper.map(
+            lead: lead,
+            features: screenFeatures(hue: 0.62, warmth: -0.7),
+            isEnabled: true
+        )
+
+        XCTAssertNotEqual(warm.intervalSemitones, cool.intervalSemitones)
+        XCTAssertTrue(warm.intervalSemitones.contains(4))
+        XCTAssertTrue(cool.intervalSemitones.contains(5) || cool.intervalSemitones.contains(3))
+    }
+
+    func testScreenOrchestraMapperSanitizesNonFiniteFeatures() {
+        var mapper = ScreenOrchestraMapper()
+        let orchestra = mapper.map(
+            lead: leadState(amplitude: .infinity, frequency: .nan),
+            features: ScreenSampleFeatures(
+                sampleCount: 12,
+                meanBrightness: .nan,
+                meanSaturation: .infinity,
+                meanHue: -.infinity,
+                contrast: .nan,
+                warmth: .infinity
+            ),
+            isEnabled: true
+        )
+
+        XCTAssertFalse(orchestra.isActive)
+        XCTAssertTrue(orchestra.rootFrequency.isFinite)
+        XCTAssertTrue(orchestra.amplitude.isFinite)
+        XCTAssertTrue(orchestra.richness.isFinite)
+        XCTAssertTrue(orchestra.motion.isFinite)
+        XCTAssertTrue(orchestra.detuneCents.isFinite)
+        XCTAssertGreaterThanOrEqual(orchestra.voiceCount, 0)
+        XCTAssertLessThanOrEqual(orchestra.voiceCount, 4)
+    }
 }
 #else
 func soundMapperAssertions() {
@@ -294,5 +401,38 @@ private func frame(
         speed: speed,
         acceleration: acceleration,
         directionAngle: directionAngle
+    )
+}
+
+private func leadState(
+    amplitude: Double,
+    frequency: Double = 440
+) -> SoundState {
+    SoundState(
+        isSilent: amplitude <= 0,
+        frequency: frequency,
+        amplitude: amplitude,
+        filterBrightness: 0.5,
+        accentTriggered: false,
+        accentIntensity: 0,
+        displayNoteName: "A4"
+    )
+}
+
+private func screenFeatures(
+    sampleCount: Int = 576,
+    brightness: Double = 0.5,
+    saturation: Double = 0.5,
+    hue: Double = 0.2,
+    contrast: Double = 0.3,
+    warmth: Double = 0.1
+) -> ScreenSampleFeatures {
+    ScreenSampleFeatures(
+        sampleCount: sampleCount,
+        meanBrightness: brightness,
+        meanSaturation: saturation,
+        meanHue: hue,
+        contrast: contrast,
+        warmth: warmth
     )
 }

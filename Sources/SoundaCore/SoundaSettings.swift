@@ -4,19 +4,22 @@ public struct SoundaSettings: Equatable, Sendable {
     public var sensitivity: Double
     public var accentAmount: Double
     public var preset: Preset
+    public var screenOrchestraEnabled: Bool
 
     public init(
         isEnabled: Bool = true,
         masterVolume: Double = 0.42,
         sensitivity: Double = 0.32,
         accentAmount: Double = 0.68,
-        preset: Preset = .minorPentatonic
+        preset: Preset = .minorPentatonic,
+        screenOrchestraEnabled: Bool = true
     ) {
         self.isEnabled = isEnabled
         self.masterVolume = masterVolume
         self.sensitivity = sensitivity
         self.accentAmount = accentAmount
         self.preset = preset
+        self.screenOrchestraEnabled = screenOrchestraEnabled
     }
 }
 

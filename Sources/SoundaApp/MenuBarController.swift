@@ -20,7 +20,7 @@ final class MenuBarController {
         )
 
         popover.behavior = .transient
-        popover.contentSize = NSSize(width: 280, height: 300)
+        popover.contentSize = NSSize(width: 280, height: 330)
         popover.contentViewController = contentViewController
 
         if let button = statusItem.button {
@@ -47,6 +47,12 @@ final class MenuBarController {
     func updateAudioStatus(_ status: String) {
         DispatchQueue.main.async { [weak self] in
             self?.contentViewController.updateAudioStatus(status)
+        }
+    }
+
+    func updateScreenStatus(_ status: String) {
+        DispatchQueue.main.async { [weak self] in
+            self?.contentViewController.updateScreenStatus(status)
         }
     }
 }
@@ -76,9 +82,11 @@ private final class SoundaControlsViewController: NSViewController {
     private let sensitivitySlider = NSSlider(value: 0, minValue: 0.08, maxValue: 0.70, target: nil, action: nil)
     private let accentSlider = NSSlider(value: 0, minValue: 0, maxValue: 0.95, target: nil, action: nil)
     private let presetPopUp = NSPopUpButton(frame: .zero, pullsDown: false)
+    private let screenOrchestraButton = NSButton(checkboxWithTitle: "Screen orchestra", target: nil, action: nil)
     private let intensityValueLabel = NSTextField(labelWithString: "0%")
     private let noteValueLabel = NSTextField(labelWithString: "Silence")
     private let audioStatusValueLabel = NSTextField(labelWithString: "Audio starting")
+    private let screenStatusValueLabel = NSTextField(labelWithString: "Screen starting")
 
     init(
         settings: SoundaSettings,
@@ -116,6 +124,16 @@ private final class SoundaControlsViewController: NSViewController {
         audioStatusValueLabel.stringValue = status
         audioStatusValueLabel.textColor = status.hasPrefix("Audio unavailable") ? .systemRed : .secondaryLabelColor
     }
+
+    func updateScreenStatus(_ status: String) {
+        screenStatusValueLabel.stringValue = status
+        screenStatusValueLabel.toolTip = screenStatusTooltip(for: status)
+        if status.hasPrefix("Screen unavailable") || status.hasPrefix("Screen permission") {
+            screenStatusValueLabel.textColor = .systemOrange
+        } else {
+            screenStatusValueLabel.textColor = .secondaryLabelColor
+        }
+    }
 }
 
 private extension SoundaControlsViewController {
@@ -134,14 +152,13 @@ private extension SoundaControlsViewController {
         stackView.addArrangedSubview(sliderRow(title: "Sensitivity", slider: sensitivitySlider, action: #selector(sensitivityChanged(_:))))
         stackView.addArrangedSubview(sliderRow(title: "Accent amount", slider: accentSlider, action: #selector(accentChanged(_:))))
         stackView.addArrangedSubview(presetRow())
+        screenOrchestraButton.target = self
+        screenOrchestraButton.action = #selector(screenOrchestraChanged(_:))
+        stackView.addArrangedSubview(screenOrchestraButton)
         stackView.addArrangedSubview(readoutRow(title: "Intensity", valueLabel: intensityValueLabel))
         stackView.addArrangedSubview(readoutRow(title: "Note", valueLabel: noteValueLabel))
         stackView.addArrangedSubview(readoutRow(title: "Audio", valueLabel: audioStatusValueLabel))
-
-        let colorMode = NSButton(checkboxWithTitle: "Color mode (experimental)", target: nil, action: nil)
-        colorMode.state = .off
-        colorMode.isEnabled = false
-        stackView.addArrangedSubview(colorMode)
+        stackView.addArrangedSubview(readoutRow(title: "Screen", valueLabel: screenStatusValueLabel))
 
         let escapeLabel = NSTextField(labelWithString: "Escape: Control-Option-Command-Q")
         escapeLabel.font = .systemFont(ofSize: 11)
@@ -208,6 +225,7 @@ private extension SoundaControlsViewController {
         titleLabel.font = .systemFont(ofSize: 12, weight: .medium)
 
         valueLabel.alignment = .right
+        valueLabel.font = .monospacedDigitSystemFont(ofSize: 11, weight: .regular)
         valueLabel.lineBreakMode = .byTruncatingTail
 
         let row = NSStackView(views: [titleLabel, valueLabel])
@@ -226,6 +244,7 @@ private extension SoundaControlsViewController {
         volumeSlider.doubleValue = settings.masterVolume
         sensitivitySlider.doubleValue = settings.sensitivity
         accentSlider.doubleValue = settings.accentAmount
+        screenOrchestraButton.state = settings.screenOrchestraEnabled ? .on : .off
         let presetIndex = SoundaSettings.Preset.allCases.firstIndex(of: settings.preset) ?? 0
         presetPopUp.selectItem(at: presetIndex)
     }
@@ -260,11 +279,32 @@ private extension SoundaControlsViewController {
         publishSettings()
     }
 
+    @objc func screenOrchestraChanged(_ sender: NSButton) {
+        settings.screenOrchestraEnabled = sender.state == .on
+        publishSettings()
+    }
+
     @objc func quit(_ sender: NSButton) {
         onQuit()
     }
 
     func clamp(_ value: Int, lower: Int, upper: Int) -> Int {
         min(max(value, lower), upper)
+    }
+
+    func screenStatusTooltip(for status: String) -> String {
+        if status.hasPrefix("live") {
+            return "Live screen samples: counter, brightness, saturation, contrast."
+        }
+
+        if status == "Screen permission requested" {
+            return "macOS should ask for Screen Recording permission for this Sounda process."
+        }
+
+        if status == "Screen permission pending" || status == "Screen permission denied" {
+            return "Grant Screen Recording permission for SoundaApp, then toggle Screen orchestra off and on."
+        }
+
+        return status
     }
 }

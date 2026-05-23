@@ -7,6 +7,7 @@ public struct SoundState: Equatable, Sendable {
     public var accentTriggered: Bool
     public var accentIntensity: Double
     public var displayNoteName: String
+    public var orchestra: ScreenOrchestraState
 
     public init(
         isEnabled: Bool = true,
@@ -16,7 +17,8 @@ public struct SoundState: Equatable, Sendable {
         filterBrightness: Double,
         accentTriggered: Bool,
         accentIntensity: Double,
-        displayNoteName: String
+        displayNoteName: String,
+        orchestra: ScreenOrchestraState = .silence
     ) {
         self.isEnabled = isEnabled
         self.isSilent = isSilent
@@ -26,6 +28,7 @@ public struct SoundState: Equatable, Sendable {
         self.accentTriggered = accentTriggered
         self.accentIntensity = accentIntensity
         self.displayNoteName = displayNoteName
+        self.orchestra = orchestra
     }
 }
 

@@ -100,7 +100,12 @@ struct DiagnosticsRunner {
         duration requestedDuration: TimeInterval,
         style: PointerMelodyDemoStyle = .odeToJoy
     ) -> Int32 {
-        let duration = min(max(requestedDuration, 1), 60)
+        guard requestedDuration.isFinite else {
+            print("Pointer melody demo failed: duration must be a finite number.")
+            return 1
+        }
+
+        let duration = clampedDemoDuration(requestedDuration)
         let canPostEvents = CGPreflightPostEventAccess()
         let source = canPostEvents ? CGEventSource(stateID: .hidSystemState) : nil
         let originalLocation = NSEvent.mouseLocation
@@ -568,13 +573,44 @@ private func glidePointer(
 }
 
 private func quartzPoint(fromAppKitPoint point: CGPoint, screen: NSScreen) -> CGPoint {
-    let frame = screen.frame
-    let yWithinScreen = point.y - frame.minY
+    let appKitFrame = screen.frame
+    let normalizedX = CGFloat(
+        clamp(
+            Double((point.x - appKitFrame.minX) / max(appKitFrame.width, .leastNonzeroMagnitude)),
+            lower: 0,
+            upper: 1
+        )
+    )
+    let normalizedY = CGFloat(
+        clamp(
+            Double((point.y - appKitFrame.minY) / max(appKitFrame.height, .leastNonzeroMagnitude)),
+            lower: 0,
+            upper: 1
+        )
+    )
+
+    guard let displayID = displayID(for: screen) else {
+        let yWithinScreen = point.y - appKitFrame.minY
+        return CGPoint(
+            x: point.x,
+            y: appKitFrame.minY + appKitFrame.height - yWithinScreen
+        )
+    }
+
+    let quartzBounds = CGDisplayBounds(displayID)
 
     return CGPoint(
-        x: point.x,
-        y: frame.minY + frame.height - yWithinScreen
+        x: quartzBounds.minX + normalizedX * quartzBounds.width,
+        y: quartzBounds.minY + (1 - normalizedY) * quartzBounds.height
     )
+}
+
+private func displayID(for screen: NSScreen) -> CGDirectDisplayID? {
+    if let screenNumber = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber {
+        return CGDirectDisplayID(screenNumber.uint32Value)
+    }
+
+    return screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID
 }
 
 private func point(normalizedX: Double, normalizedY: Double, screen: NSScreen) -> CGPoint {
@@ -606,6 +642,10 @@ private func isProcessRunning(_ pid: pid_t) -> Bool {
 private func smoothstep(_ value: Double) -> Double {
     let clamped = clamp(value, lower: 0, upper: 1)
     return clamped * clamped * (3 - 2 * clamped)
+}
+
+private func clampedDemoDuration(_ duration: TimeInterval) -> TimeInterval {
+    return min(max(duration, 1), 60)
 }
 
 private func clamp(_ value: Double, lower: Double, upper: Double) -> Double {

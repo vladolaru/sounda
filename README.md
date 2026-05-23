@@ -15,6 +15,14 @@ swift run SoundaApp
 
 Sounda starts as a menu bar app. Open the menu bar control to enable or mute playback, adjust volume, tune sensitivity, choose a preset, change accent amount, and quit.
 
+For agent/dev sessions where the app should stay open after the launching shell exits, use the non-keepalive launchd helper:
+
+```bash
+scripts/run-sounda-dev.sh
+```
+
+The helper clears the old `sounda-test` demo job if present and starts `SoundaApp` as `sounda-dev` with `KeepAlive` disabled, so quitting Sounda does not relaunch it.
+
 Emergency exits:
 
 - Press `Control-Option-Command-Q` to quit Sounda without using the mouse.

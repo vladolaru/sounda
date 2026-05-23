@@ -10,6 +10,10 @@ if arguments.contains("--pointer-smoke") {
     Foundation.exit(DiagnosticsRunner().runPointerSmoke())
 }
 
+if let screenSamplerBenchmarkDuration = screenSamplerBenchmarkDuration(from: arguments) {
+    Foundation.exit(ScreenSamplerBenchmarkRunner().run(duration: screenSamplerBenchmarkDuration))
+}
+
 if let pointerMelodyDemo = pointerMelodyDemo(from: arguments) {
     Foundation.exit(
         DiagnosticsRunner().runPointerMelodyDemo(
@@ -49,4 +53,21 @@ private func pointerMelodyDemo(from arguments: [String]) -> PointerMelodyDemo? {
     }
 
     return PointerMelodyDemo(duration: duration, style: style)
+}
+
+private func screenSamplerBenchmarkDuration(from arguments: [String]) -> TimeInterval? {
+    guard let flagIndex = arguments.firstIndex(of: "--screen-sampler-benchmark") else {
+        return nil
+    }
+
+    let valueIndex = arguments.index(after: flagIndex)
+    guard
+        arguments.indices.contains(valueIndex),
+        !arguments[valueIndex].hasPrefix("--"),
+        let duration = TimeInterval(arguments[valueIndex])
+    else {
+        return 4
+    }
+
+    return duration
 }

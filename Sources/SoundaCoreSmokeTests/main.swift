@@ -182,4 +182,15 @@ assert(sanitized.amplitude.isFinite, "amplitude should be finite for non-finite 
 assert(sanitized.filterBrightness.isFinite, "filter brightness should be finite for non-finite input")
 assert(sanitized.accentIntensity.isFinite, "accent intensity should be finite for non-finite input")
 
+var featureAccumulator = ScreenSampleFeatureAccumulator()
+featureAccumulator.add(red: 1, green: 0, blue: 0)
+featureAccumulator.add(red: 0, green: 0, blue: 1)
+featureAccumulator.add(red: 1, green: 1, blue: 1)
+let features = featureAccumulator.finish()
+assert(features.sampleCount == 3, "screen sampler feature accumulator should count samples")
+assertApproxEqual(features.meanBrightness, 5.0 / 9.0, accuracy: 0.0001, "screen sampler mean brightness")
+assert(features.meanSaturation > 0.6, "screen sampler should report saturation")
+assert(features.contrast > 0.6, "screen sampler should report contrast")
+assertApproxEqual(features.warmth, 0, accuracy: 0.0001, "screen sampler warmth")
+
 print("SoundaCore smoke test passed")

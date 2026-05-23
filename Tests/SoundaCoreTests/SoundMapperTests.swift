@@ -238,6 +238,36 @@ final class SoundMapperTests: XCTestCase {
         XCTAssertTrue(state.filterBrightness.isFinite)
         XCTAssertTrue(state.accentIntensity.isFinite)
     }
+
+    func testScreenSampleFeatureAccumulatorReducesPixelsToSyntheticValues() {
+        var accumulator = ScreenSampleFeatureAccumulator()
+
+        accumulator.add(red: 1, green: 0, blue: 0)
+        accumulator.add(red: 0, green: 0, blue: 1)
+        accumulator.add(red: 1, green: 1, blue: 1)
+
+        let features = accumulator.finish()
+
+        XCTAssertEqual(features.sampleCount, 3)
+        XCTAssertEqual(features.meanBrightness, 5.0 / 9.0, accuracy: 0.0001)
+        XCTAssertGreaterThan(features.meanSaturation, 0.6)
+        XCTAssertGreaterThan(features.contrast, 0.6)
+        XCTAssertEqual(features.warmth, 0, accuracy: 0.0001)
+    }
+
+    func testScreenSampleFeatureAccumulatorSanitizesInputs() {
+        var accumulator = ScreenSampleFeatureAccumulator()
+
+        accumulator.add(red: .nan, green: .infinity, blue: -.infinity)
+        let features = accumulator.finish()
+
+        XCTAssertEqual(features.sampleCount, 1)
+        XCTAssertTrue(features.meanBrightness.isFinite)
+        XCTAssertTrue(features.meanSaturation.isFinite)
+        XCTAssertTrue(features.meanHue.isFinite)
+        XCTAssertTrue(features.contrast.isFinite)
+        XCTAssertTrue(features.warmth.isFinite)
+    }
 }
 #else
 func soundMapperAssertions() {

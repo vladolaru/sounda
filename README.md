@@ -54,6 +54,14 @@ swift run SoundaApp --pointer-ode-demo 30
 
 The pointer performance moves only the cursor, never clicks, restores the starting cursor position, and falls back to direct cursor warping when macOS blocks posted input events.
 
+Run the screen sensor benchmark:
+
+```bash
+swift run SoundaApp --screen-sampler-benchmark 5
+```
+
+The benchmark needs Screen Recording permission for the launching terminal. It does not record, save, or preview frames; it reduces tiny cursor-centered samples to synthetic values and discards the buffers.
+
 ## Demo Checklist
 
 1. Run `swift run SoundaApp`.

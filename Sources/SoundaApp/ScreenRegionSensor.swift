@@ -58,13 +58,16 @@ final class ScreenRegionSensor {
         Task { [weak self] in
             await self?.stopActiveStream()
         }
-        publishStatus("Screen orchestra off")
+        publishStatus("Screen chords off")
     }
 }
 
 private extension ScreenRegionSensor {
     func runCaptureLoop() async {
-        publishStatus("Screen orchestra starting")
+        publishStatus("Screen chords starting")
+        defer {
+            captureTask = nil
+        }
 
         while !Task.isCancelled {
             do {
@@ -85,7 +88,7 @@ private extension ScreenRegionSensor {
             } catch {
                 publishStatus("Screen unavailable: \(error.localizedDescription)")
                 await stopActiveStream()
-                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                break
             }
         }
 
@@ -126,7 +129,7 @@ private extension ScreenRegionSensor {
         streamConfiguration = configuration
         streamOutput = output
         activeDisplayID = display.displayID
-        publishStatus("Screen orchestra active")
+        publishStatus("Screen chords active")
     }
 
     func followPointer(on display: SCDisplay) async throws {

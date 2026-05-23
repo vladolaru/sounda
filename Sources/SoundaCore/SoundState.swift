@@ -1,4 +1,9 @@
 public struct SoundState: Equatable, Sendable {
+    public enum LeadTimbre: Equatable, Sendable {
+        case synth
+        case violin
+    }
+
     public var isEnabled: Bool
     public var isSilent: Bool
     public var frequency: Double
@@ -8,6 +13,7 @@ public struct SoundState: Equatable, Sendable {
     public var accentIntensity: Double
     public var displayNoteName: String
     public var orchestra: ScreenOrchestraState
+    public var leadTimbre: LeadTimbre
 
     public init(
         isEnabled: Bool = true,
@@ -18,7 +24,8 @@ public struct SoundState: Equatable, Sendable {
         accentTriggered: Bool,
         accentIntensity: Double,
         displayNoteName: String,
-        orchestra: ScreenOrchestraState = .silence
+        orchestra: ScreenOrchestraState = .silence,
+        leadTimbre: LeadTimbre = .synth
     ) {
         self.isEnabled = isEnabled
         self.isSilent = isSilent
@@ -29,6 +36,7 @@ public struct SoundState: Equatable, Sendable {
         self.accentIntensity = accentIntensity
         self.displayNoteName = displayNoteName
         self.orchestra = orchestra
+        self.leadTimbre = leadTimbre
     }
 }
 

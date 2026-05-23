@@ -149,16 +149,22 @@ var minorMapper = SoundMapper(settings: SoundaSettings(preset: .minorPentatonic)
 var ragtimeMapper = SoundMapper(settings: SoundaSettings(preset: .ragtime))
 var glassMapper = SoundMapper(settings: SoundaSettings(preset: .glassChimes))
 var bassMapper = SoundMapper(settings: SoundaSettings(preset: .warmBass))
+var violinMapper = SoundMapper(settings: SoundaSettings(preset: .violinLead))
 let minor = minorMapper.map(frame(normalizedX: 0.75, speed: 1.0))
 let ragtime = ragtimeMapper.map(frame(normalizedX: 0.75, speed: 1.0))
 let glass = glassMapper.map(frame(normalizedX: 0.75, speed: 1.0))
 let bass = bassMapper.map(frame(normalizedX: 0.75, speed: 1.0))
+let violin = violinMapper.map(frame(normalizedX: 0.75, speed: 1.0))
 assert(minor.displayNoteName != ragtime.displayNoteName, "ragtime preset should pick distinct notes")
 assert(minor.displayNoteName != glass.displayNoteName, "glass preset should pick distinct notes")
 assert(minor.displayNoteName != bass.displayNoteName, "bass preset should pick distinct notes")
+assert(minor.displayNoteName != violin.displayNoteName, "violin preset should pick distinct notes")
 assert(ragtime.frequency < glass.frequency, "ragtime preset should sit below the glass preset")
 assert(glass.frequency > minor.frequency, "glass preset should sit above the default preset")
 assert(bass.frequency < minor.frequency, "bass preset should sit below the default preset")
+assert(violin.frequency > minor.frequency, "violin preset should sit above the default preset")
+assert(violin.frequency < glass.frequency, "violin preset should sit below the glass preset")
+assert(violin.leadTimbre == .violin, "violin preset should use violin lead timbre")
 
 mapper = SoundMapper(
     settings: SoundaSettings(
@@ -204,7 +210,8 @@ let leadForOrchestra = SoundState(
     displayNoteName: "A4"
 )
 let quietOrchestra = orchestraMapper.map(lead: leadForOrchestra, features: nil, isEnabled: true)
-assert(quietOrchestra == .silence, "missing screen features should keep orchestra silent")
+assert(!quietOrchestra.isActive, "missing screen features should keep screen chords silent")
+assert(quietOrchestra.groove.isActive, "missing screen features should still allow cursor drums")
 
 var dimOrchestraMapper = ScreenOrchestraMapper()
 var brightOrchestraMapper = ScreenOrchestraMapper()
@@ -236,5 +243,37 @@ assert(dimOrchestra.isActive, "dim sampled screen should still create a quiet or
 assert(brightOrchestra.voiceCount > dimOrchestra.voiceCount, "brighter screen should add orchestra density")
 assert(brightOrchestra.amplitude > dimOrchestra.amplitude, "brighter screen should raise orchestra level")
 assert(brightOrchestra.amplitude <= leadForOrchestra.amplitude * 0.35, "orchestra should stay below the lead")
+assert(brightOrchestra.voiceCount <= 3, "screen orchestra should avoid too many chord voices by default")
+assert(brightOrchestra.motion <= 0.12, "screen orchestra should not create warbly pad motion")
+assert(brightOrchestra.detuneCents <= 3, "screen orchestra detune should stay subtle")
+
+var grooveMapper = ScreenOrchestraMapper()
+let grooveBand = grooveMapper.map(
+    lead: leadForOrchestra,
+    features: ScreenSampleFeatures(
+        sampleCount: 576,
+        meanBrightness: 0.55,
+        meanSaturation: 0.35,
+        meanHue: 0.2,
+        contrast: 0.75,
+        warmth: 0.1
+    ),
+    isEnabled: true
+).groove
+assert(grooveBand.isActive, "screen band should create groove energy while the cursor lead is moving")
+assert(grooveBand.kickIntensity > 0.1, "screen band should drive kick energy from movement")
+assert(grooveBand.hatIntensity > 0.2, "screen band should drive hi-hat energy from contrast and movement")
+assert(grooveBand.tempoBPM >= 90 && grooveBand.tempoBPM <= 150, "screen band tempo should stay in a controlled range")
+
+var noScreenGrooveMapper = ScreenOrchestraMapper()
+let noScreenGrooveBand = noScreenGrooveMapper.map(
+    lead: leadForOrchestra,
+    features: nil,
+    isEnabled: true
+)
+assert(!noScreenGrooveBand.isActive, "missing screen samples should not create screen chords")
+assert(noScreenGrooveBand.groove.isActive, "missing screen samples should still allow cursor drums")
+assert(noScreenGrooveBand.groove.kickIntensity > 0.1, "cursor drums should include kick energy without screen capture")
+assert(noScreenGrooveBand.groove.hatIntensity > 0.1, "cursor drums should include hat energy without screen capture")
 
 print("SoundaCore smoke test passed")

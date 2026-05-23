@@ -83,6 +83,92 @@ struct DiagnosticsRunner {
             print("  Expected screen orchestra state to render non-zero pad audio.")
         }
 
+        let drumProbe = SoundState(
+            isSilent: false,
+            frequency: 440,
+            amplitude: 0,
+            filterBrightness: 0,
+            accentTriggered: false,
+            accentIntensity: 0,
+            displayNoteName: "A4",
+            orchestra: ScreenOrchestraState(
+                isActive: false,
+                rootFrequency: 440,
+                amplitude: 0,
+                voiceCount: 0,
+                intervalSemitones: [],
+                richness: 0,
+                motion: 0,
+                detuneCents: 0,
+                groove: ScreenGrooveState(
+                    isActive: true,
+                    kickIntensity: 0.75,
+                    snareIntensity: 0.65,
+                    hatIntensity: 0.8,
+                    clapTriggered: true,
+                    tempoBPM: 112
+                )
+            )
+        )
+        let drumMetrics = audioEngine.renderDebugMetrics(for: [drumProbe], framesPerState: 8_192)
+        let drumsPassed = drumMetrics.peak > 0.01 && drumMetrics.rms > 0.001
+        print(
+            String(
+                format: "screen drums replay: %@ rms=%.5f peak=%.5f accentPeak=%.5f",
+                drumsPassed ? "PASS groove" : "FAIL expected groove",
+                drumMetrics.rms,
+                drumMetrics.peak,
+                drumMetrics.accentPeak
+            )
+        )
+        if !drumsPassed {
+            didFail = true
+            print("  Expected screen groove state to render synthetic drums.")
+        }
+
+        let synthLeadProbe = SoundState(
+            isSilent: false,
+            frequency: 587.329535,
+            amplitude: 0.32,
+            filterBrightness: 0.65,
+            accentTriggered: false,
+            accentIntensity: 0,
+            displayNoteName: "D5",
+            leadTimbre: .synth
+        )
+        let violinLeadProbe = SoundState(
+            isSilent: false,
+            frequency: 587.329535,
+            amplitude: 0.32,
+            filterBrightness: 0.65,
+            accentTriggered: false,
+            accentIntensity: 0,
+            displayNoteName: "D5",
+            leadTimbre: .violin
+        )
+        let synthLeadMetrics = audioEngine.renderDebugMetrics(for: [synthLeadProbe], framesPerState: 4_096)
+        let violinLeadMetrics = audioEngine.renderDebugMetrics(for: [violinLeadProbe], framesPerState: 4_096)
+        let violinDistinct = abs(violinLeadMetrics.rms - synthLeadMetrics.rms) > 0.008
+        let violinBowed = violinLeadMetrics.earlyRMS > 0.012 &&
+            violinLeadMetrics.lateRMS > 0.11 &&
+            violinLeadMetrics.lateRMS > violinLeadMetrics.earlyRMS * 3 &&
+            violinLeadMetrics.peak < 0.45
+        print(
+            String(
+                format: "violin lead replay: %@ synthRMS=%.5f violinRMS=%.5f early=%.5f late=%.5f peak=%.5f",
+                violinDistinct && violinBowed ? "PASS bowed" : "FAIL expected bowed",
+                synthLeadMetrics.rms,
+                violinLeadMetrics.rms,
+                violinLeadMetrics.earlyRMS,
+                violinLeadMetrics.lateRMS,
+                violinLeadMetrics.peak
+            )
+        )
+        if !violinDistinct || !violinBowed {
+            didFail = true
+            print("  Expected violin lead timbre to bloom into a stronger sustained bowed body without clipping.")
+        }
+
         if didFail {
             print("Sounda self-test failed")
             return 1

@@ -72,7 +72,8 @@ public struct SoundMapper: Sendable {
             filterBrightness: smoothedFilterBrightness,
             accentTriggered: accent.triggered,
             accentIntensity: accent.intensity,
-            displayNoteName: note.name
+            displayNoteName: note.name,
+            leadTimbre: leadTimbre(for: settings.preset)
         )
     }
 }
@@ -81,6 +82,7 @@ private let minorPentatonicSemitones = [0, 3, 5, 7, 10, 12, 15, 17, 19, 22, 24]
 private let ragtimeSemitones = [0, 2, 4, 5, 7, 9, 11, 12, 14, 16, 17]
 private let glassChimeSemitones = [12, 15, 19, 22, 24, 27, 31, 34, 36]
 private let warmBassSemitones = [-24, -22, -19, -17, -14, -12, -10, -7, -5, -2, 0]
+private let violinLeadSemitones = [2, 4, 7, 9, 11, 14, 16, 19, 21, 23, 26]
 private let baseFrequency = 261.6255653005986
 private let attackSmoothing = 0.70
 private let releaseSmoothing = 0.32
@@ -138,6 +140,17 @@ private extension SoundMapper {
             return noteForPosition(normalizedX, semitones: glassChimeSemitones)
         case .warmBass:
             return noteForPosition(normalizedX, semitones: warmBassSemitones)
+        case .violinLead:
+            return noteForPosition(normalizedX, semitones: violinLeadSemitones)
+        }
+    }
+
+    func leadTimbre(for preset: SoundaSettings.Preset) -> SoundState.LeadTimbre {
+        switch preset {
+        case .violinLead:
+            return .violin
+        case .minorPentatonic, .ragtime, .glassChimes, .warmBass:
+            return .synth
         }
     }
 

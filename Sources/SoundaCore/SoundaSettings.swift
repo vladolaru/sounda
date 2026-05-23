@@ -12,7 +12,7 @@ public struct SoundaSettings: Equatable, Sendable {
         sensitivity: Double = 0.32,
         accentAmount: Double = 0.68,
         preset: Preset = .minorPentatonic,
-        screenOrchestraEnabled: Bool = true
+        screenOrchestraEnabled: Bool = false
     ) {
         self.isEnabled = isEnabled
         self.masterVolume = masterVolume
@@ -29,6 +29,7 @@ public extension SoundaSettings {
         case ragtime
         case glassChimes
         case warmBass
+        case violinLead
 
         public var displayName: String {
             switch self {
@@ -40,6 +41,8 @@ public extension SoundaSettings {
                 return "Glass chimes"
             case .warmBass:
                 return "Warm bass"
+            case .violinLead:
+                return "Violin lead"
             }
         }
     }

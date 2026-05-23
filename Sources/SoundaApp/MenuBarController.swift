@@ -18,9 +18,10 @@ final class MenuBarController {
             onSettingsChange: onSettingsChange,
             onQuit: onQuit
         )
+        _ = contentViewController.view
 
         popover.behavior = .transient
-        popover.contentSize = NSSize(width: 280, height: 330)
+        popover.contentSize = contentViewController.preferredContentSize
         popover.contentViewController = contentViewController
 
         if let button = statusItem.button {
@@ -82,9 +83,10 @@ private final class SoundaControlsViewController: NSViewController {
     private let sensitivitySlider = NSSlider(value: 0, minValue: 0.08, maxValue: 0.70, target: nil, action: nil)
     private let accentSlider = NSSlider(value: 0, minValue: 0, maxValue: 0.95, target: nil, action: nil)
     private let presetPopUp = NSPopUpButton(frame: .zero, pullsDown: false)
-    private let screenOrchestraButton = NSButton(checkboxWithTitle: "Screen orchestra", target: nil, action: nil)
+    private let screenOrchestraButton = NSButton(checkboxWithTitle: "Screen chords", target: nil, action: nil)
     private let intensityValueLabel = NSTextField(labelWithString: "0%")
     private let noteValueLabel = NSTextField(labelWithString: "Silence")
+    private let grooveValueLabel = NSTextField(labelWithString: "Drums quiet")
     private let audioStatusValueLabel = NSTextField(labelWithString: "Audio starting")
     private let screenStatusValueLabel = NSTextField(labelWithString: "Screen starting")
 
@@ -105,7 +107,7 @@ private final class SoundaControlsViewController: NSViewController {
     }
 
     override func loadView() {
-        view = NSView(frame: NSRect(x: 0, y: 0, width: 280, height: 300))
+        view = NSView(frame: NSRect(x: 0, y: 0, width: 280, height: 1))
     }
 
     override func viewDidLoad() {
@@ -118,6 +120,11 @@ private final class SoundaControlsViewController: NSViewController {
         let intensity = Int((soundState.amplitude * 100).rounded())
         intensityValueLabel.stringValue = intensity > 0 ? "\(intensity)%" : "Quiet"
         noteValueLabel.stringValue = soundState.displayNoteName
+
+        let groove = soundState.orchestra.groove
+        let grooveEnergy = max(groove.kickIntensity, groove.snareIntensity, groove.hatIntensity)
+        let groovePercent = Int((grooveEnergy * 100).rounded())
+        grooveValueLabel.stringValue = groove.isActive ? "Drums \(groovePercent)%" : "Drums quiet"
     }
 
     func updateAudioStatus(_ status: String) {
@@ -157,6 +164,7 @@ private extension SoundaControlsViewController {
         stackView.addArrangedSubview(screenOrchestraButton)
         stackView.addArrangedSubview(readoutRow(title: "Intensity", valueLabel: intensityValueLabel))
         stackView.addArrangedSubview(readoutRow(title: "Note", valueLabel: noteValueLabel))
+        stackView.addArrangedSubview(readoutRow(title: "Groove", valueLabel: grooveValueLabel))
         stackView.addArrangedSubview(readoutRow(title: "Audio", valueLabel: audioStatusValueLabel))
         stackView.addArrangedSubview(readoutRow(title: "Screen", valueLabel: screenStatusValueLabel))
 
@@ -175,6 +183,8 @@ private extension SoundaControlsViewController {
             stackView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             stackView.topAnchor.constraint(equalTo: view.topAnchor, constant: 16),
         ])
+
+        resizeToFit(stackView: stackView)
     }
 
     func sliderRow(title: String, slider: NSSlider, action: Selector) -> NSView {
@@ -292,6 +302,14 @@ private extension SoundaControlsViewController {
         min(max(value, lower), upper)
     }
 
+    func resizeToFit(stackView: NSStackView) {
+        view.layoutSubtreeIfNeeded()
+        let contentHeight = ceil(stackView.fittingSize.height) + 32
+        let size = NSSize(width: 280, height: max(300, contentHeight))
+        preferredContentSize = size
+        view.setFrameSize(size)
+    }
+
     func screenStatusTooltip(for status: String) -> String {
         if status.hasPrefix("live") {
             return "Live screen samples: counter, brightness, saturation, contrast."
@@ -302,7 +320,7 @@ private extension SoundaControlsViewController {
         }
 
         if status == "Screen permission pending" || status == "Screen permission denied" {
-            return "Grant Screen Recording permission for SoundaApp, then toggle Screen orchestra off and on."
+            return "Grant Screen Recording permission for SoundaApp, then toggle Screen chords off and on."
         }
 
         return status

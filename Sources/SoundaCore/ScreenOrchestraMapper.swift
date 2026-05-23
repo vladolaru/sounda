@@ -13,9 +13,7 @@ public struct ScreenOrchestraMapper: Sendable {
         guard
             isEnabled,
             lead.isEnabled,
-            !lead.isSilent,
-            let features,
-            features.sampleCount > 0
+            !lead.isSilent
         else {
             smoothedFeatures = nil
             return .silence
@@ -28,27 +26,39 @@ public struct ScreenOrchestraMapper: Sendable {
             return .silence
         }
 
-        let targetFeatures = SmoothedScreenFeatures(features)
+        let hasScreenFeatures = features.map { $0.sampleCount > 0 } ?? false
+        let targetFeatures = features.map(SmoothedScreenFeatures.init) ?? .neutralGroove
         let currentFeatures: SmoothedScreenFeatures
-        if let smoothedFeatures {
+        if hasScreenFeatures, let smoothedFeatures {
             currentFeatures = smoothedFeatures.smoothed(toward: targetFeatures)
         } else {
             currentFeatures = targetFeatures
         }
-        smoothedFeatures = currentFeatures
+        smoothedFeatures = hasScreenFeatures ? currentFeatures : nil
 
-        let voiceCount = clampedVoiceCount(for: currentFeatures.brightness)
-        let richness = clamp(0.18 + currentFeatures.saturation * 0.82, lower: 0, upper: 1)
-        let motion = clamp(pow(currentFeatures.contrast, 0.7), lower: 0, upper: 1)
-        let detuneCents = 1.0 + currentFeatures.saturation * 9.0
+        let voiceCount = clampedVoiceCount(brightness: currentFeatures.brightness, saturation: currentFeatures.saturation)
+        let richness = clamp(0.14 + currentFeatures.saturation * 0.34, lower: 0, upper: 0.48)
+        let motion = clamp(currentFeatures.contrast * 0.10, lower: 0, upper: 0.12)
+        let detuneCents = 0.4 + currentFeatures.saturation * 2.2
         let levelRatio = min(
-            0.35,
-            0.10 + currentFeatures.brightness * 0.18 + currentFeatures.saturation * 0.05
+            0.24,
+            0.07 + currentFeatures.brightness * 0.12 + currentFeatures.saturation * 0.03
         )
         let amplitude = clamp(leadAmplitude * levelRatio, lower: 0, upper: leadAmplitude * 0.35)
+        let groove = grooveState(lead: lead, features: currentFeatures, leadAmplitude: leadAmplitude)
 
-        guard amplitude > orchestraSilenceThreshold, voiceCount > 0 else {
-            return .silence
+        guard hasScreenFeatures, amplitude > orchestraSilenceThreshold, voiceCount > 0 else {
+            return groove.isActive ? ScreenOrchestraState(
+                isActive: false,
+                rootFrequency: rootFrequency,
+                amplitude: 0,
+                voiceCount: 0,
+                intervalSemitones: [],
+                richness: 0,
+                motion: 0,
+                detuneCents: 0,
+                groove: groove
+            ) : .silence
         }
 
         return ScreenOrchestraState(
@@ -59,7 +69,8 @@ public struct ScreenOrchestraMapper: Sendable {
             intervalSemitones: intervals(hue: currentFeatures.hue, warmth: currentFeatures.warmth),
             richness: richness,
             motion: motion,
-            detuneCents: detuneCents
+            detuneCents: detuneCents,
+            groove: groove
         )
     }
 }
@@ -102,34 +113,74 @@ private struct SmoothedScreenFeatures: Sendable {
         self.contrast = contrast
         self.warmth = warmth
     }
+
+    static let neutralGroove = SmoothedScreenFeatures(
+        brightness: 0.45,
+        saturation: 0.20,
+        hue: 0.2,
+        contrast: 0.45,
+        warmth: 0
+    )
 }
 
 private let screenFeatureSmoothing = 0.22
 private let orchestraSilenceThreshold = 0.0005
 
-private func clampedVoiceCount(for brightness: Double) -> Int {
-    clamp(Int((brightness * 3).rounded()) + 1, lower: 1, upper: 4)
+private func clampedVoiceCount(brightness: Double, saturation: Double) -> Int {
+    if brightness < 0.18 {
+        return 1
+    }
+
+    if brightness > 0.72, saturation > 0.38 {
+        return 3
+    }
+
+    return 2
 }
 
 private func intervals(hue: Double, warmth: Double) -> [Int] {
     if warmth >= 0.25 {
-        return [0, 4, 7, 14]
+        return [0, 7, 12]
     }
 
     if warmth <= -0.25 {
-        return hue >= 0.48 && hue <= 0.78 ? [0, 5, 7, 12] : [0, 3, 7, 10]
+        return hue >= 0.48 && hue <= 0.78 ? [0, 5, 12] : [0, 7, 14]
     }
 
     switch hue {
     case 0..<0.16, 0.88...1:
-        return [0, 4, 7, 12]
+        return [0, 7, 12]
     case 0.25..<0.46:
-        return [0, 5, 9, 14]
+        return [0, 5, 12]
     case 0.50..<0.78:
-        return [0, 7, 12, 19]
+        return [0, 7, 14]
     default:
-        return [0, 3, 7, 12]
+        return [0, 7, 12]
     }
+}
+
+private func grooveState(
+    lead: SoundState,
+    features: SmoothedScreenFeatures,
+    leadAmplitude: Double
+) -> ScreenGrooveState {
+    let movementEnergy = clamp(leadAmplitude * 3.1, lower: 0, upper: 1)
+    let tempoBPM = clamp(96 + features.contrast * 34 + features.saturation * 12, lower: 90, upper: 150)
+    let kickIntensity = clamp((movementEnergy - 0.12) * (0.36 + features.brightness * 0.64), lower: 0, upper: 1)
+    let hatIntensity = clamp(movementEnergy * (0.20 + features.contrast * 0.68), lower: 0, upper: 1)
+    let snareIntensity = lead.accentTriggered
+        ? clamp(0.30 + sanitizedUnit(lead.accentIntensity) * 0.72 + features.contrast * 0.16, lower: 0, upper: 1)
+        : 0
+    let isActive = kickIntensity > 0.02 || hatIntensity > 0.02 || snareIntensity > 0.02
+
+    return ScreenGrooveState(
+        isActive: isActive,
+        kickIntensity: kickIntensity,
+        snareIntensity: snareIntensity,
+        hatIntensity: hatIntensity,
+        clapTriggered: snareIntensity > 0.15,
+        tempoBPM: tempoBPM
+    )
 }
 
 private func smooth(current: Double, target: Double) -> Double {

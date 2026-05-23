@@ -199,18 +199,36 @@ final class SoundMapperTests: XCTestCase {
         var ragtimeMapper = SoundMapper(settings: SoundaSettings(preset: .ragtime))
         var glassMapper = SoundMapper(settings: SoundaSettings(preset: .glassChimes))
         var bassMapper = SoundMapper(settings: SoundaSettings(preset: .warmBass))
+        var violinMapper = SoundMapper(settings: SoundaSettings(preset: .violinLead))
 
         let minor = minorMapper.map(frame(normalizedX: 0.75, speed: 1.0))
         let ragtime = ragtimeMapper.map(frame(normalizedX: 0.75, speed: 1.0))
         let glass = glassMapper.map(frame(normalizedX: 0.75, speed: 1.0))
         let bass = bassMapper.map(frame(normalizedX: 0.75, speed: 1.0))
+        let violin = violinMapper.map(frame(normalizedX: 0.75, speed: 1.0))
 
         XCTAssertNotEqual(minor.displayNoteName, ragtime.displayNoteName)
         XCTAssertNotEqual(minor.displayNoteName, glass.displayNoteName)
         XCTAssertNotEqual(minor.displayNoteName, bass.displayNoteName)
+        XCTAssertNotEqual(minor.displayNoteName, violin.displayNoteName)
         XCTAssertLessThan(ragtime.frequency, glass.frequency)
         XCTAssertGreaterThan(glass.frequency, minor.frequency)
         XCTAssertLessThan(bass.frequency, minor.frequency)
+        XCTAssertGreaterThan(violin.frequency, minor.frequency)
+        XCTAssertLessThan(violin.frequency, glass.frequency)
+    }
+
+    func testViolinLeadPresetUsesBowedLeadTimbre() {
+        var mapper = SoundMapper(settings: SoundaSettings(preset: .violinLead))
+
+        let low = mapper.map(frame(normalizedX: 0, speed: 1.0))
+        let high = mapper.map(frame(timestamp: 0.1, normalizedX: 1, speed: 1.0))
+
+        XCTAssertEqual(SoundaSettings.Preset.violinLead.displayName, "Violin lead")
+        XCTAssertEqual(low.leadTimbre, .violin)
+        XCTAssertEqual(high.leadTimbre, .violin)
+        XCTAssertGreaterThanOrEqual(low.frequency, 293.66)
+        XCTAssertLessThanOrEqual(high.frequency, 1760)
     }
 
     func testNonFiniteInputsMapToFiniteSafeOutput() {
@@ -269,7 +287,7 @@ final class SoundMapperTests: XCTestCase {
         XCTAssertTrue(features.warmth.isFinite)
     }
 
-    func testScreenOrchestraRequiresLeadAndSamples() {
+    func testScreenOrchestraRequiresLeadForScreenBand() {
         var mapper = ScreenOrchestraMapper()
         let lead = SoundState(
             isSilent: false,
@@ -281,7 +299,6 @@ final class SoundMapperTests: XCTestCase {
             displayNoteName: "A4"
         )
 
-        XCTAssertEqual(mapper.map(lead: lead, features: nil, isEnabled: true), .silence)
         XCTAssertEqual(mapper.map(lead: lead, features: screenFeatures(), isEnabled: false), .silence)
         XCTAssertEqual(mapper.map(lead: .silence, features: screenFeatures(), isEnabled: true), .silence)
     }
@@ -307,9 +324,10 @@ final class SoundMapperTests: XCTestCase {
         XCTAssertGreaterThan(bright.voiceCount, dim.voiceCount)
         XCTAssertGreaterThan(bright.amplitude, dim.amplitude)
         XCTAssertLessThanOrEqual(bright.amplitude, lead.amplitude * 0.35)
+        XCTAssertLessThanOrEqual(bright.voiceCount, 3)
     }
 
-    func testScreenSaturationAndContrastShapeRichnessAndMotion() {
+    func testScreenSaturationShapesRichnessWithoutWarblyMotion() {
         let lead = leadState(amplitude: 0.6)
         var calmMapper = ScreenOrchestraMapper()
         var vividMapper = ScreenOrchestraMapper()
@@ -327,7 +345,8 @@ final class SoundMapperTests: XCTestCase {
 
         XCTAssertGreaterThan(vivid.richness, calm.richness)
         XCTAssertGreaterThan(vivid.detuneCents, calm.detuneCents)
-        XCTAssertGreaterThan(vivid.motion, calm.motion)
+        XCTAssertLessThanOrEqual(vivid.detuneCents, 3)
+        XCTAssertLessThanOrEqual(vivid.motion, 0.12)
     }
 
     func testWarmAndCoolScreensChooseDifferentHarmonyColors() {
@@ -347,8 +366,59 @@ final class SoundMapperTests: XCTestCase {
         )
 
         XCTAssertNotEqual(warm.intervalSemitones, cool.intervalSemitones)
-        XCTAssertTrue(warm.intervalSemitones.contains(4))
-        XCTAssertTrue(cool.intervalSemitones.contains(5) || cool.intervalSemitones.contains(3))
+        XCTAssertTrue(warm.intervalSemitones.allSatisfy { [0, 7, 12, 14].contains($0) })
+        XCTAssertTrue(cool.intervalSemitones.allSatisfy { [0, 5, 7, 12, 14].contains($0) })
+    }
+
+    func testScreenBandMapsMovementIntoGrooveEnergy() {
+        var mapper = ScreenOrchestraMapper()
+
+        let groove = mapper.map(
+            lead: leadState(amplitude: 0.55),
+            features: screenFeatures(brightness: 0.55, saturation: 0.35, contrast: 0.75),
+            isEnabled: true
+        ).groove
+
+        XCTAssertTrue(groove.isActive)
+        XCTAssertGreaterThan(groove.kickIntensity, 0.1)
+        XCTAssertGreaterThan(groove.hatIntensity, 0.2)
+        XCTAssertGreaterThan(groove.tempoBPM, 90)
+        XCTAssertLessThanOrEqual(groove.tempoBPM, 150)
+    }
+
+    func testScreenBandGrooveWorksWithoutScreenSamples() {
+        var mapper = ScreenOrchestraMapper()
+
+        let band = mapper.map(
+            lead: leadState(amplitude: 0.58),
+            features: nil,
+            isEnabled: true
+        )
+
+        XCTAssertFalse(band.isActive)
+        XCTAssertTrue(band.groove.isActive)
+        XCTAssertGreaterThan(band.groove.kickIntensity, 0.1)
+        XCTAssertGreaterThan(band.groove.hatIntensity, 0.1)
+    }
+
+    func testScreenBandTurnsLeadAccentsIntoClapTriggers() {
+        var mapper = ScreenOrchestraMapper()
+        let groove = mapper.map(
+            lead: SoundState(
+                isSilent: false,
+                frequency: 440,
+                amplitude: 0.45,
+                filterBrightness: 0.5,
+                accentTriggered: true,
+                accentIntensity: 0.7,
+                displayNoteName: "A4"
+            ),
+            features: screenFeatures(brightness: 0.5, saturation: 0.4, contrast: 0.5),
+            isEnabled: true
+        ).groove
+
+        XCTAssertTrue(groove.clapTriggered)
+        XCTAssertGreaterThan(groove.snareIntensity, 0.5)
     }
 
     func testScreenOrchestraMapperSanitizesNonFiniteFeatures() {
@@ -372,6 +442,10 @@ final class SoundMapperTests: XCTestCase {
         XCTAssertTrue(orchestra.richness.isFinite)
         XCTAssertTrue(orchestra.motion.isFinite)
         XCTAssertTrue(orchestra.detuneCents.isFinite)
+        XCTAssertTrue(orchestra.groove.kickIntensity.isFinite)
+        XCTAssertTrue(orchestra.groove.snareIntensity.isFinite)
+        XCTAssertTrue(orchestra.groove.hatIntensity.isFinite)
+        XCTAssertTrue(orchestra.groove.tempoBPM.isFinite)
         XCTAssertGreaterThanOrEqual(orchestra.voiceCount, 0)
         XCTAssertLessThanOrEqual(orchestra.voiceCount, 4)
     }

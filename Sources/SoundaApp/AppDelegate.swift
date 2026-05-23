@@ -114,8 +114,8 @@ private extension AppDelegate {
         var soundState = soundMapper.map(frame)
         soundState.orchestra = screenOrchestraMapper.map(
             lead: soundState,
-            features: latestScreenFeatures,
-            isEnabled: settings.screenOrchestraEnabled
+            features: settings.screenOrchestraEnabled ? latestScreenFeatures : nil,
+            isEnabled: true
         )
         audioEngineController?.updateState(soundState)
         menuBarController?.updateReadout(soundState)
